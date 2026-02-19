@@ -36,11 +36,16 @@ This triggers the following pipeline:
 
 The project follows a **Workflow + Skill** architecture where the LLM agent acts as the orchestrator.
 
-### Core Workflows (`.agent/workflows/`)
+### Cross-Platform Support
+- **OS Detection**: Workflows are designed to detect the current operating system (Linux/macOS vs. Windows) and use the appropriate shell (`bash` or `powershell`).
+- **Path Compatibility**: Python scripts use `pathlib` to ensure paths work correctly across all platforms.
+- **Environment**: `.env` loading logic is provided for both Bash and PowerShell environments.
+
+### Core Workflows (`.gemini/workflows/`)
 - **`knowledge_tutor.md`**: The primary entry point. Orchestrates the full search-learn-save lifecycle.
 - **`knowledge_query.md`**: Allows querying previously collected knowledge using RAG without re-searching the web.
 
-### Skills (`.agent/skills/`)
+### Skills (`.gemini/skills/`)
 Skills are standalone Python scripts that perform specific tasks:
 - **`tavily-search`**: Uses Tavily for discovery and Jina Reader for deep content extraction (Markdown).
 - **`rag-retriever`**: Implements a BM25-based RAG system to provide context for tutoring while minimizing token usage.
@@ -64,7 +69,7 @@ Skills are standalone Python scripts that perform specific tasks:
 | Task | Command |
 |------|---------|
 | **Full Tutor Workflow** | `/knowledge_tutor` |
-| **Search Only** | `python .agent/skills/tavily-search/scripts/search_tavily.py --query "Topic" --output-dir "path"` |
-| **Create RAG Index** | `python .agent/skills/rag-retriever/scripts/create_manifest.py --topic "Topic" --sources-dir "path"` |
-| **Retrieve Chunks** | `python .agent/skills/rag-retriever/scripts/retrieve_chunks.py --query "Question" --sources-dir "path"` |
-| **Save to Obsidian** | `python .agent/skills/obsidian-integration/scripts/save_to_obsidian.py --topic "Topic" ...` |
+| **Search Only** | `python .gemini/skills/tavily-search/scripts/search_tavily.py --query "Topic" --output-dir "path"` |
+| **Create RAG Index** | `python .gemini/skills/rag-retriever/scripts/create_manifest.py --topic "Topic" --sources-dir "path"` |
+| **Retrieve Chunks** | `python .gemini/skills/rag-retriever/scripts/retrieve_chunks.py --query "Question" --sources-dir "path"` |
+| **Save to Obsidian** | `python .gemini/skills/obsidian-integration/scripts/save_to_obsidian.py --topic "Topic" ...` |

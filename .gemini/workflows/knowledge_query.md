@@ -5,8 +5,57 @@ trigger: /knowledge_query
 
 # Knowledge Query Workflow
 
+> 💡 **OS 실행 규칙**: 현재 시스템의 OS를 감지하여 적절한 셸을 사용하세요.
+> - **Linux/macOS**: `bash`를 사용하여 실행합니다.
+> - **Windows**: `powershell`을 사용하여 실행하며, 변수 및 명령어 구문을 Windows 환경에 맞게 조정합니다.
+
 `knowledge_tutor`로 수집·생성된 `/rag/{topic}/manifest.json`을 조회하여
 BM25 RAG 검색으로 사용자 질문에 즉시 답변합니다.
+
+---
+
+## Prerequisites
+
+실행 전 다음을 확인하세요:
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+# 환경 변수 로드 및 AGENT_ROOT 설정
+if [ -f .env ]; then set -a; source .env; set +a; fi
+# .env에 AGENT_ROOT가 없다면 현재 디렉토리를 사용
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+echo "AGENT_ROOT: $AGENT_ROOT"
+echo "TAVILY_API_KEY: ${TAVILY_API_KEY:0:8}..."
+echo "OBSIDIAN_VAULT_PATH: $OBSIDIAN_VAULT_PATH"
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+# .env 파일 로드
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+
+# AGENT_ROOT 설정
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+Write-Host "AGENT_ROOT: $env:AGENT_ROOT"
+if ($env:TAVILY_API_KEY) { Write-Host "TAVILY_API_KEY: $($env:TAVILY_API_KEY.Substring(0,8))..." }
+Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
+```
+
+</tab>
+</tabs>
 
 - 새로운 웹 검색 없이 기존 수집 자료만 활용 (빠름)
 - 질문마다 관련 청크만 추출 → 토큰 절감 (~94%)
@@ -18,6 +67,9 @@ BM25 RAG 검색으로 사용자 질문에 즉시 답변합니다.
 ## Phase 1: RAG Manifest 조회 및 토픽 선택
 
 ### Step 1-1: 기존 RAG 목록 확인
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
 
 ```bash
 # 환경 변수 로드 및 AGENT_ROOT 설정
@@ -45,6 +97,49 @@ if os.path.exists(rag_root):
                 continue
 "
 ```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+# .env 로드
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+$RAG_ROOT = "$env:OBSIDIAN_VAULT_PATH/Agent/rag"
+
+# 경로 역슬래시 → 슬래시 변환
+$RAG_ROOT_PY = $RAG_ROOT -replace '\\', '/'
+
+# 등록된 RAG manifest 목록 출력 (Python 사용)
+python -c "
+import os, json, math
+rag_root = '$RAG_ROOT_PY'
+print(f'{'Topic':<40} {'Files':<6} {'Size_KB':<8} {'Updated':<20} {'SafeTopic'}')
+print('-' * 90)
+if os.path.exists(rag_root):
+    for d in sorted(os.listdir(rag_root)):
+        manifest_path = os.path.join(rag_root, d, 'manifest.json')
+        if os.path.isfile(manifest_path):
+            try:
+                with open(manifest_path, 'r') as f:
+                    m = json.load(f)
+                    size_kb = math.ceil(m.get('total_bytes', 0) / 1024)
+                    print(f'{m.get('topic', '')[:38]:<40} {m.get('file_count', 0):<6} {size_kb:<8} {m.get('updated', '')[:19]:<20} {m.get('safe_topic', '')}')
+            except Exception:
+                continue
+"
+```
+
+</tab>
+</tabs>
 
 > **예시 출력:**
 > ```
@@ -76,6 +171,9 @@ if os.path.exists(rag_root):
 
 ### Step 1-3: Manifest에서 소스 경로 로드
 
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
 ```bash
 SAFE_TOPIC="{선택한_safe_topic}"
 if [ -f .env ]; then export $(cat .env | xargs); fi
@@ -96,10 +194,52 @@ with open('$MANIFEST_PATH', 'r') as f:
     echo "📄 파일 수: $FILE_COUNT개 ($TOTAL_KB KB)"
 else
     echo "⚠️ 소스 디렉토리를 찾을 수 없습니다: $MANIFEST_PATH"
-    echo "   knowledge_tutor로 재수집하시겠습니까? (y/n)"
-    # y 입력 시 Step 1-4로 이동
 fi
 ```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+$SAFE_TOPIC = "{선택한_safe_topic}"
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+$RAG_ROOT = "$env:OBSIDIAN_VAULT_PATH/Agent/rag"
+$MANIFEST_PATH = "$RAG_ROOT/$SAFE_TOPIC/manifest.json"
+
+if (Test-Path $MANIFEST_PATH) {
+    # 경로의 역슬래시를 슬래시로 변환 (Python 인라인 코드 내 이스케이프 오류 방지)
+    $MANIFEST_PATH_PY = $MANIFEST_PATH -replace '\\', '/'
+
+    # Python으로 정보 추출
+    $manifestData = python -c "
+import json
+with open('$MANIFEST_PATH_PY', 'r', encoding='utf-8') as f:
+    m = json.load(f)
+    print(f'SOURCE_DIRS={','.join(m.get('source_dirs', []))}')
+    print(f'FILE_COUNT={m.get('file_count', 0)}')
+    print(f'TOTAL_KB={int(m.get('total_bytes', 0)/1024)}')
+"
+    # PowerShell 변수로 파싱
+    $manifestData | ForEach-Object {
+        $name, $value = $_.Split('=', 2)
+        Set-Variable -Name $name -Value $value
+    }
+    Write-Host "📂 소스 경로: $SOURCE_DIRS"
+    Write-Host "📄 파일 수: $FILE_COUNT개 ($TOTAL_KB KB)"
+} else {
+    Write-Host "⚠️ 소스 디렉토리를 찾을 수 없습니다: $MANIFEST_PATH"
+}
+```
+
+</tab>
+</tabs>
 
 ---
 
@@ -116,6 +256,9 @@ fi
 **`y` 입력 시 순서대로 실행:**
 
 #### 1-4-a: Tavily 검색 수집
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
 
 ```bash
 # 환경 변수 로드 및 AGENT_ROOT 설정
@@ -135,9 +278,42 @@ python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --min-content-length 300
 ```
 
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
+$OUTPUT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+
+python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
+  --query "{TOPIC}" `
+  --output-dir "$OUTPUT_DIR" `
+  --max-results 5 `
+  --search-depth advanced `
+  --use-jina `
+  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" `
+  --min-content-length 300
+```
+
+</tab>
+</tabs>
+
 > ⚠️ 수집 결과 품질이 낮으면 `knowledge_tutor` Step 1-5 (Garbage 정리 + 재검색) 절차를 따릅니다.
 
 #### 1-4-b: RAG Manifest 생성
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
 
 ```bash
 python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
@@ -146,13 +322,41 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --rag-root "$RAG_ROOT"
 ```
 
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
+  --topic "{TOPIC}" `
+  --sources-dir "$OUTPUT_DIR" `
+  --rag-root "$RAG_ROOT"
+```
+
+</tab>
+</tabs>
+
 #### 1-4-c: manifest 로드 후 Step 2로 진행
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
 
 ```bash
 # Manifest 재로드
 MANIFEST_PATH="$RAG_ROOT/$SAFE_TOPIC/manifest.json"
 SOURCE_DIRS=$(python3 -c "import json; print(','.join(json.load(open('$MANIFEST_PATH'))['source_dirs']))")
 ```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+# Manifest 재로드
+$MANIFEST_PATH = "$RAG_ROOT/$SAFE_TOPIC/manifest.json"
+$SOURCE_DIRS = python -c "import json; print(','.join(json.load(open(r'$MANIFEST_PATH'))['source_dirs']))"
+```
+
+</tab>
+</tabs>
 
 ---
 
@@ -168,6 +372,9 @@ SOURCE_DIRS=$(python3 -c "import json; print(','.join(json.load(open('$MANIFEST_
 ---
 
 ### Step 2-2: RAG 청크 검색 실행
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -185,6 +392,29 @@ for dir in "${DIRS[@]}"; do
       --show-stats
 done
 ```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+# 단일 소스 디렉토리 (SOURCE_DIRS가 쉼표로 구분된 문자열일 경우 처리)
+$DIRS = $SOURCE_DIRS -split ','
+
+foreach ($dir in $DIRS) {
+    Write-Host "=== [$dir] 검색 중 ==="
+    python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" `
+      --query "{QUESTION}" `
+      --sources-dir "$dir" `
+      --top-k 5 `
+      --chunk-size 800 `
+      --show-stats
+}
+```
+
+</tab>
+</tabs>
 
 > 💡 **top-k 조정 가이드:**
 > - 간단한 사실 확인 → `--top-k 3`
@@ -223,6 +453,9 @@ done
 
 사용자가 `[범위]`를 요청하거나 처음에 복수 토픽을 지정한 경우:
 
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
 ```bash
 # Python을 사용하여 여러 manifest의 source_dirs를 합침
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -253,6 +486,53 @@ for dir in "${DIRS[@]}"; do
 done
 ```
 
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+# .env 로드
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+$RAG_ROOT = "$env:OBSIDIAN_VAULT_PATH/Agent/rag"
+
+# Python을 사용하여 여러 manifest의 source_dirs를 합침
+# 경로 역슬래시 → 슬래시 변환 (Python 인라인 코드 안전성 확보)
+$RAG_ROOT_PY = $RAG_ROOT -replace '\\', '/'
+
+$ALL_DIRS_STR = python -c "
+import json, os
+rag_root = '$RAG_ROOT_PY'
+topics = '{topic1_safe},{topic2_safe}'.split(',')
+all_dirs = []
+for t in topics:
+    p = os.path.join(rag_root, t.strip(), 'manifest.json')
+    if os.path.exists(p):
+        all_dirs.extend(json.load(open(p))['source_dirs'])
+print(','.join(all_dirs))
+"
+
+$DIRS = $ALL_DIRS_STR -split ','
+foreach ($dir in $DIRS) {
+    Write-Host "=== [$dir] 검색 중 ==="
+    python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" `
+      --query "{QUESTION}" `
+      --sources-dir "$dir" `
+      --top-k 3 `
+      --chunk-size 800
+}
+```
+
+</tab>
+</tabs>
+
 ---
 
 ### Step 2-6: 종료 감지
@@ -266,9 +546,12 @@ done
 
 세션 동안의 **모든 질문과 답변(QA_HISTORY)**을 생략 없이 누적하여 저장합니다.
 
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
 ```bash
 # 환경 변수 로드
-if [ -f .env ]; then export $(cat .env | xargs); fi
+if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 # {Q&A_기록} 파라미터에 세션 전체 대화 로그를 전달합니다.
@@ -279,6 +562,32 @@ python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian
   --category "Knowledge_Query" \
   --vault-path "$OBSIDIAN_VAULT_PATH/Agent"
 ```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+# {Q&A_기록} 파라미터에 세션 전체 대화 로그를 전달합니다.
+python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
+  --topic "{검색_주제}_조회" `
+  --content "{전체_Q&A_기록_QA_HISTORY}" `
+  --summary "{핵심_포인트_SUMMARY}" `
+  --category "Knowledge_Query" `
+  --vault-path "$env:OBSIDIAN_VAULT_PATH/Agent"
+```
+
+</tab>
+</tabs>
 
 > 💡 **중요**: 요약이 아닌 실제 사용자와의 모든 문답 로그를 `{전체_Q&A_기록_QA_HISTORY}`에 포함하여 저장하세요.
 
