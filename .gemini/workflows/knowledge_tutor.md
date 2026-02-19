@@ -5,6 +5,10 @@ trigger: /knowledge_tutor
 
 # Knowledge Tutor Workflow
 
+> 💡 **OS 실행 규칙**: 현재 시스템의 OS를 감지하여 적절한 셸을 사용하세요.
+> - **Linux/macOS**: `bash`를 사용하여 실행합니다.
+> - **Windows**: `powershell`을 사용하여 실행하며, 변수 및 명령어 구문을 Windows 환경에 맞게 조정합니다.
+
 사용자가 학습하고 싶은 주제를 입력하면:
 1. Tavily 웹 검색으로 최신 자료 수집
 2. **RAG manifest 생성** (`/rag/{topic}/manifest.json`)
@@ -20,6 +24,9 @@ trigger: /knowledge_tutor
 
 실행 전 다음을 확인하세요:
 
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
 ```bash
 # 환경 변수 로드 및 AGENT_ROOT 설정
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -30,6 +37,31 @@ echo "AGENT_ROOT: $AGENT_ROOT"
 echo "TAVILY_API_KEY: ${TAVILY_API_KEY:0:8}..."
 echo "OBSIDIAN_VAULT_PATH: $OBSIDIAN_VAULT_PATH"
 ```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+# .env 파일 로드
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+
+# AGENT_ROOT 설정
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+Write-Host "AGENT_ROOT: $env:AGENT_ROOT"
+if ($env:TAVILY_API_KEY) { Write-Host "TAVILY_API_KEY: $($env:TAVILY_API_KEY.Substring(0,8))..." }
+Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
+```
+
+</tab>
+</tabs>
 
 > ⚠️ `TAVILY_API_KEY`가 없으면 워크플로우를 진행할 수 없습니다.  
 > `.env.example`을 복사해 `.env`를 설정하거나 환경변수를 직접 설정하세요.
@@ -53,14 +85,31 @@ echo "OBSIDIAN_VAULT_PATH: $OBSIDIAN_VAULT_PATH"
 
 검색을 실행하기 전에 반드시 skill 문서를 읽으세요:
 
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 cat "$AGENT_ROOT/.gemini/skills/tavily-search/SKILL.md"
 ```
 
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+Get-Content "$env:AGENT_ROOT/.gemini/skills/tavily-search/SKILL.md"
+```
+
+</tab>
+</tabs>
+
 ---
 
 ### Step 1-3: Tavily 검색 실행
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
 
 ```bash
 # 환경 변수 로드
@@ -81,15 +130,60 @@ python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --min-content-length 300
 ```
 
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+# .env 로드
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
+$OUTPUT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+
+# 검색 실행
+python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
+  --query "{TOPIC}" `
+  --output-dir "$OUTPUT_DIR" `
+  --max-results 5 `
+  --search-depth advanced `
+  --use-jina `
+  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" `
+  --min-content-length 300
+```
+
+</tab>
+</tabs>
+
 > 💡 특정 기술 주제는 `--include-domains "nvidia.com,arxiv.org,docs.nvidia.com"` 추가 권장
 
 ---
 
 ### Step 1-4: 검색 결과 확인
 
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
 ```bash
 ls -lh "$OUTPUT_DIR"
 ```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+Get-ChildItem -Path "$OUTPUT_DIR" | Select-Object Name, Length, LastWriteTime
+```
+
+</tab>
+</tabs>
 
 생성된 파일 목록과 각 파일의 제목(title frontmatter)을 사용자에게 제시합니다.
 
@@ -108,13 +202,29 @@ ls -lh "$OUTPUT_DIR"
 
 1. **Garbage 폴더 삭제**
 
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
 ```bash
 rm -rf "$OUTPUT_DIR"
 ```
 
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+Remove-Item -Recurse -Force "$OUTPUT_DIR"
+```
+
+</tab>
+</tabs>
+
 2. **쿼리 구체화 후 재검색**
 
 모호한 단어는 영어 + 기술 맥락을 명확히 지정합니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
 
 ```bash
 # 예시: "mamba 기술적 의미" → "Mamba SSM architecture deep learning"
@@ -134,6 +244,29 @@ python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --min-content-length 500
 ```
 
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+$SAFE_TOPIC = "{REFINED_TOPIC}" -replace '[ /]', '_'
+$OUTPUT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+
+python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
+  --query "{REFINED_TOPIC}" `
+  --output-dir "$OUTPUT_DIR" `
+  --max-results 5 `
+  --search-depth advanced `
+  --use-jina `
+  --include-domains "arxiv.org,huggingface.co,medium.com" `
+  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" `
+  --min-content-length 500
+```
+
+</tab>
+</tabs>
+
 > 💡 **쿼리 구체화 팁:**
 > - 한국어 혼용 대신 **영문 기술 쿼리** 사용
 > - 모호한 용어는 도메인 키워드를 명시 (예: `deep learning`, `architecture`)
@@ -148,6 +281,9 @@ python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
 수집이 완료되면 **반드시** RAG manifest를 생성합니다.
 이 manifest는 `/knowledge_query` 워크플로우에서 RAG 검색 시 사용됩니다.
 
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
 ```bash
 # 환경 변수 로드
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -160,6 +296,32 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --sources-dir "$OUTPUT_DIR" \
   --rag-root "$RAG_ROOT"
 ```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+# .env 로드
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+$RAG_ROOT = "$env:OBSIDIAN_VAULT_PATH/Agent/rag"
+
+python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
+  --topic "{TOPIC}" `
+  --sources-dir "$OUTPUT_DIR" `
+  --rag-root "$RAG_ROOT"
+```
+
+</tab>
+</tabs>
 
 > 📁 생성 위치: `{OBSIDIAN_VAULT_PATH}/rag/{safe_topic}/manifest.json`
 >
@@ -188,6 +350,9 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
 
 #### Step 2-2-a: 튜터링 시작 시 초기 컨텍스트 확보
 
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
@@ -199,7 +364,27 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
   --show-stats
 ```
 
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" `
+  --query "{TOPIC} 핵심 개념 아키텍처 특징" `
+  --sources-dir "$OUTPUT_DIR" `
+  --top-k 7 `
+  --chunk-size 800 `
+  --show-stats
+```
+
+</tab>
+</tabs>
+
 #### Step 2-2-b: 사용자 질문마다 재검색
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -210,6 +395,22 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
   --top-k 5 \
   --chunk-size 800
 ```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" `
+  --query "{USER_QUESTION}" `
+  --sources-dir "$OUTPUT_DIR" `
+  --top-k 5 `
+  --chunk-size 800
+```
+
+</tab>
+</tabs>
 
 > 💡 **전략**: 질문이 바뀔 때마다 재검색 → 항상 현재 질문과 가장 관련된 청크만 컨텍스트에 올라감
 
@@ -240,6 +441,9 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
 
 사용자 질문이 수집된 자료 범위를 벗어날 경우:
 
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -260,6 +464,39 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --rag-root "$RAG_ROOT"
 ```
 
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
+$OUTPUT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+$RAG_ROOT = "$env:OBSIDIAN_VAULT_PATH/Agent/rag"
+
+python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
+  --query "{사용자_질문_키워드}" `
+  --output-dir "$OUTPUT_DIR" `
+  --max-results 3
+
+# 추가 수집 후 manifest도 업데이트
+python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
+  --topic "{TOPIC}" `
+  --sources-dir "$OUTPUT_DIR" `
+  --rag-root "$RAG_ROOT"
+```
+
+</tab>
+</tabs>
+
 ---
 
 ### Step 2-5: 종료 감지
@@ -278,6 +515,9 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
 
 ### Step 3-2: 통합 노트 저장 (전체 내역 포함) ⭐
 
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
 ```bash
 # 환경 변수 로드
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -295,6 +535,37 @@ python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian
   --vault-path "$OBSIDIAN_VAULT_PATH/Agent" \
   --sources "$SOURCES"
 ```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+# 소스 파일 목록 생성 (쉼표로 구분)
+$SOURCES_LIST = Get-ChildItem -Path "$OUTPUT_DIR/*.md" | Select-Object -ExpandProperty FullName
+$SOURCES = $SOURCES_LIST -join ","
+
+# --content 파라미터에 {QA_HISTORY}를 전달하여 전체 대화가 저장되도록 합니다.
+python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
+  --topic "{TOPIC}" `
+  --content "{전체_대화_기록_QA_HISTORY}" `
+  --summary "{핵심_요약_SUMMARY}" `
+  --category "AI_Study" `
+  --vault-path "$env:OBSIDIAN_VAULT_PATH/Agent" `
+  --sources "$SOURCES"
+```
+
+</tab>
+</tabs>
 
 > 💡 **중요**: `{전체_대화_기록_QA_HISTORY}`에는 사용자와의 모든 대화 내용이 포함되어야 합니다. 요약본이 아닌 실제 대화 로그를 저장하세요.
 
