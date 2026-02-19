@@ -1,0 +1,37 @@
+﻿# (紐⑹감/留곹겕 泥?겕 116媛??꾪꽣??
+# RAG Context ??Query: "NVIDIA ?먯쑉二쇳뻾 ?쇱꽌 湲곗닠 ?곸꽭"
+# (紐⑹감 ?꾪꽣 ??117媛?泥?겕 以??곸쐞 5媛?/ top_k=5)
+
+## [AI Summary]
+# Summary: NVIDIA autonomous driving technology DRIVE platform features 2024 2025
+
+> AI-Generated Summary by Tavily
+
+In 2024, NVIDIA's DRIVE Thor platform was introduced for autonomous vehicles. In 2025, DRIVE Hyperion achieved safety and cybersecurity milestones. The platform supports level 4 autonomous driving.
+
+## [Related Chunks]
+
+### [1] NVIDIA_autonomous_driving_technology_DRIVE_platform_features_2024_2025_1_2026-02-19.md (chunk #17, score=2.128)
+짤 2025 NVIDIA Corporation. All rights reserved. NVIDIA, the NVIDIA logo, NVIDIA Cosmos, NVIDIA DGX, NVIDIA DRIVE, NVIDIA DRIVE AGX, NVIDIA DRIVE AGX Hyperion, NVIDIA DRIVE AGX Thor, NVIDIA DRIVE Hyperion, NVIDIA DRIVE Orin, NVIDIA DRIVE Thor, NVIDIA Omniverse and NVIDIA OVX are trademarks and/or registered trademarks of NVIDIA Corporation in the U.S. and other countries. Other company and product names may be trademarks of the respective companies with which they are associated. Features, pricing, availability and specifications are subject to change without notice.
+
+### [2] NVIDIA_autonomous_driving_technology_DRIVE_platform_features_2024_2025_1_2026-02-19.md (chunk #12, score=2.027)
+Certain statements in this press release including, but not limited to, statements as to: the benefits, impact, and performance of NVIDIA?셲 products, services, and technologies, including NVIDIA DRIVE AGX Hyperion, NVIDIA DriveOS automotive operating system, NVIDIA DRIVE AI Systems Inspection Lab, DRIVE Thor, DRIVE Orin, NVIDIA Blackwell architecture, NVIDIA DGX systems, NVIDIA Omniverse platform, NVIDIA OVX systems, and NVIDIA Cosmos; third parties adopting NVIDIA?셲 products and technologies; with autonomous vehicles ??one of the largest robotics markets ??now here, the NVIDIA Blackwell-powered platform shifting this revolution into high gear; the next wave of autonomous machines relying on physical AI world foundation models to understand and interact with the real world; NVIDIA DRIVE de
+
+### [3] NVIDIA_autonomous_driving_technology_DRIVE_platform_features_2024_2025_5_2026-02-19.md (chunk #9, score=1.857)
+In trucking, Aurora, Volvo Autonomous Solutions and Waabi are developing level 4 autonomous trucks powered by the NVIDIA DRIVE platform. Their next-generation systems, built on NVIDIA DRIVE AGX Thor, will accelerate Volvo?셲 upcoming L4 fleet, extending the reach of end-to-end NVIDIA AI infrastructure from passenger mobility to long-haul freight.
+
+**NVIDIA DRIVE AGX Hyperion 10: The Common Platform for L4-Ready Vehicles**
+
+The NVIDIA DRIVE AGX Hyperion 10 production platform features the NVIDIA DRIVE AGX Thor system-on-a-chip; the safety-certified NVIDIA DriveOS??operating system; a fully qualified multimodal sensor suite including 14 high-definition cameras; nine radars, one lidar and 12 ultrasonics; and a qualified board design.
+
+### [4] NVIDIA_autonomous_driving_technology_DRIVE_platform_features_2024_2025_3_2026-02-19.md (chunk #25, score=1.846)
+Deep neural networks (DNNs) are trained on the NVIDIA DGX??platform, which incorporates the best of NVIDIA software, infrastructure, and expertise in a modern, unified AI development solution. Then, they?셱e tested and validated in simulation on NVIDIA OVX before being seamlessly deployed to run on our AI computer in the vehicle. NVIDIA OVX is a computing system designed to power large-scale Omniverse digital twins. To operate safely, self- driving vehicles require onboard supercomputers capable of processing all the sensor data in real time.
+
+**NVIDIA DRIVE Hardware**
+
+Our underlying hardware solutions include:
+
+**NVIDIA DRIVE AGX Hyperion**
+
+### [5] NVIDIA_autonomous_driving_technology_DRIVE_platform_features_2024_2025_5_2026-02-19.md (chunk #18, score=1.802)
+n information currently available to management and are subject to risks and uncertainties that could cause results to be materially different than expectations. Important factors that could cause actual results to differ materially include: global economic and political conditions; NVIDIA?셲 reliance on third parties to manufacture, assemble, package and test NVIDIA?셲 products; the impact of technological development and competition; development of new products and technologies or enhancements to NVIDIA?셲 existing product and technologies; market acceptance of NVIDIA?셲 products or NVIDIA?셲 partners??products; design, manufacturing or software defects; changes in consumer preferences or demands; changes in industry standards and interfaces; unexpected loss of performance of NVIDIA?셲 product
