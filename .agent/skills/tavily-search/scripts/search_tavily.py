@@ -249,11 +249,22 @@ def create_source_file(
 ) -> str:
     """검색 결과 하나를 개별 md 파일로 저장"""
     timestamp = datetime.now().strftime("%Y-%m-%d")
-    safe_query = safe_filename(query)
-    filename = f"{safe_query}_{index}_{timestamp}.md"
+    
+    title = source.get("title", "Untitled")
+    safe_name = safe_filename(title)
+    
+    # 제목이 없거나 특수문자로만 되어있으면 쿼리를 대신 사용
+    if not safe_name.strip("_"):
+        safe_name = safe_filename(query)
+        
+    # 파일명 길이 제한 (Windows 호환성 등)
+    if len(safe_name) > 150:
+        safe_name = safe_name[:150]
+
+    filename = f"{safe_name}_{index}_{timestamp}.md"
     filepath = output_dir / filename
 
-    title   = source.get("title",   "Untitled")
+    # title = source.get("title", "Untitled") # 이미 위에서 가져옴
     url     = source.get("url",     "")
     snippet = source.get("content", "")
     score   = source.get("score",   "")

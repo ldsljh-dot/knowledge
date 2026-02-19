@@ -1,0 +1,34 @@
+# Environment Variables
+.env
+.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project Specific Temps
+tmp_test_output/
+logs/
+*.log
+rag_output_temp.txt
+rag_result_*.txt
+zi7r9p7p
+zihNUVEK
