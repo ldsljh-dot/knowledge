@@ -20,9 +20,15 @@ trigger: /knowledge_tutor
 
 실행 전 다음을 확인하세요:
 
-```powershell
-echo "TAVILY_API_KEY: $($env:TAVILY_API_KEY.Substring(0,8))..."
-echo "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
+```bash
+# 환경 변수 로드 및 AGENT_ROOT 설정
+if [ -f .env ]; then set -a; source .env; set +a; fi
+# .env에 AGENT_ROOT가 없다면 현재 디렉토리를 사용
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+echo "AGENT_ROOT: $AGENT_ROOT"
+echo "TAVILY_API_KEY: ${TAVILY_API_KEY:0:8}..."
+echo "OBSIDIAN_VAULT_PATH: $OBSIDIAN_VAULT_PATH"
 ```
 
 > ⚠️ `TAVILY_API_KEY`가 없으면 워크플로우를 진행할 수 없습니다.  
@@ -47,26 +53,31 @@ echo "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
 
 검색을 실행하기 전에 반드시 skill 문서를 읽으세요:
 
-```powershell
-Get-Content "$AGENT_ROOT\.agent\skills\tavily-search\SKILL.md"
+```bash
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+cat "$AGENT_ROOT/.gemini/skills/tavily-search/SKILL.md"
 ```
 
 ---
 
 ### Step 1-3: Tavily 검색 실행
 
-```powershell
-$AGENT_ROOT = "C:\Users\ldslj\OneDrive\문서\work\claude\knowledge_collector"
-$SAFE_TOPIC = "{TOPIC}" -replace '[ /]','_'
-$OUTPUT_DIR = "$env:OBSIDIAN_VAULT_PATH\sources\$SAFE_TOPIC"
+```bash
+# 환경 변수 로드
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-python "$AGENT_ROOT\.agent\skills\tavily-search\scripts\search_tavily.py" `
-  --query "{TOPIC}" `
-  --output-dir "$OUTPUT_DIR" `
-  --max-results 5 `
-  --search-depth advanced `
-  --use-jina `
-  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" `
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
+OUTPUT_DIR="$OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+
+# 검색 실행
+python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
+  --query "{TOPIC}" \
+  --output-dir "$OUTPUT_DIR" \
+  --max-results 5 \
+  --search-depth advanced \
+  --use-jina \
+  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" \
   --min-content-length 300
 ```
 
@@ -76,8 +87,8 @@ python "$AGENT_ROOT\.agent\skills\tavily-search\scripts\search_tavily.py" `
 
 ### Step 1-4: 검색 결과 확인
 
-```powershell
-Get-ChildItem "$OUTPUT_DIR" | Select-Object Name, Length | Format-Table
+```bash
+ls -lh "$OUTPUT_DIR"
 ```
 
 생성된 파일 목록과 각 파일의 제목(title frontmatter)을 사용자에게 제시합니다.
@@ -97,27 +108,29 @@ Get-ChildItem "$OUTPUT_DIR" | Select-Object Name, Length | Format-Table
 
 1. **Garbage 폴더 삭제**
 
-```powershell
-Remove-Item -Recurse -Force "$OUTPUT_DIR"
+```bash
+rm -rf "$OUTPUT_DIR"
 ```
 
 2. **쿼리 구체화 후 재검색**
 
 모호한 단어는 영어 + 기술 맥락을 명확히 지정합니다.
 
-```powershell
+```bash
 # 예시: "mamba 기술적 의미" → "Mamba SSM architecture deep learning"
-$SAFE_TOPIC = "{REFINED_TOPIC}" -replace '[ /]','_'
-$OUTPUT_DIR = "$env:OBSIDIAN_VAULT_PATH\sources\$SAFE_TOPIC"
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-python "$AGENT_ROOT\.agent\skills\tavily-search\scripts\search_tavily.py" `
-  --query "{REFINED_TOPIC}" `
-  --output-dir "$OUTPUT_DIR" `
-  --max-results 5 `
-  --search-depth advanced `
-  --use-jina `
-  --include-domains "arxiv.org,huggingface.co,medium.com" `
-  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" `
+SAFE_TOPIC=$(echo "{REFINED_TOPIC}" | tr ' /' '_')
+OUTPUT_DIR="$OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+
+python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
+  --query "{REFINED_TOPIC}" \
+  --output-dir "$OUTPUT_DIR" \
+  --max-results 5 \
+  --search-depth advanced \
+  --use-jina \
+  --include-domains "arxiv.org,huggingface.co,medium.com" \
+  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" \
   --min-content-length 500
 ```
 
@@ -135,12 +148,16 @@ python "$AGENT_ROOT\.agent\skills\tavily-search\scripts\search_tavily.py" `
 수집이 완료되면 **반드시** RAG manifest를 생성합니다.
 이 manifest는 `/knowledge_query` 워크플로우에서 RAG 검색 시 사용됩니다.
 
-```powershell
-$RAG_ROOT = "$env:OBSIDIAN_VAULT_PATH\rag"
+```bash
+# 환경 변수 로드
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-python "$AGENT_ROOT\.agent\skills\rag-retriever\scripts\create_manifest.py" `
-  --topic "{TOPIC}" `
-  --sources-dir "$OUTPUT_DIR" `
+RAG_ROOT="$OBSIDIAN_VAULT_PATH/Agent/rag"
+
+python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
+  --topic "{TOPIC}" \
+  --sources-dir "$OUTPUT_DIR" \
   --rag-root "$RAG_ROOT"
 ```
 
@@ -171,22 +188,26 @@ python "$AGENT_ROOT\.agent\skills\rag-retriever\scripts\create_manifest.py" `
 
 #### Step 2-2-a: 튜터링 시작 시 초기 컨텍스트 확보
 
-```powershell
-python "$AGENT_ROOT\.agent\skills\rag-retriever\scripts\retrieve_chunks.py" `
-  --query "{TOPIC} 핵심 개념 아키텍처 특징" `
-  --sources-dir "$OUTPUT_DIR" `
-  --top-k 7 `
-  --chunk-size 800 `
+```bash
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
+  --query "{TOPIC} 핵심 개념 아키텍처 특징" \
+  --sources-dir "$OUTPUT_DIR" \
+  --top-k 7 \
+  --chunk-size 800 \
   --show-stats
 ```
 
 #### Step 2-2-b: 사용자 질문마다 재검색
 
-```powershell
-python "$AGENT_ROOT\.agent\skills\rag-retriever\scripts\retrieve_chunks.py" `
-  --query "{USER_QUESTION}" `
-  --sources-dir "$OUTPUT_DIR" `
-  --top-k 5 `
+```bash
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
+  --query "{USER_QUESTION}" \
+  --sources-dir "$OUTPUT_DIR" \
+  --top-k 5 \
   --chunk-size 800
 ```
 
@@ -219,16 +240,23 @@ python "$AGENT_ROOT\.agent\skills\rag-retriever\scripts\retrieve_chunks.py" `
 
 사용자 질문이 수집된 자료 범위를 벗어날 경우:
 
-```powershell
-python "$AGENT_ROOT\.agent\skills\tavily-search\scripts\search_tavily.py" `
-  --query "{사용자_질문_키워드}" `
-  --output-dir "$OUTPUT_DIR" `
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
+OUTPUT_DIR="$OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+RAG_ROOT="$OBSIDIAN_VAULT_PATH/Agent/rag"
+
+python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
+  --query "{사용자_질문_키워드}" \
+  --output-dir "$OUTPUT_DIR" \
   --max-results 3
 
 # 추가 수집 후 manifest도 업데이트
-python "$AGENT_ROOT\.agent\skills\rag-retriever\scripts\create_manifest.py" `
-  --topic "{TOPIC}" `
-  --sources-dir "$OUTPUT_DIR" `
+python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
+  --topic "{TOPIC}" \
+  --sources-dir "$OUTPUT_DIR" \
   --rag-root "$RAG_ROOT"
 ```
 
@@ -243,23 +271,32 @@ python "$AGENT_ROOT\.agent\skills\rag-retriever\scripts\create_manifest.py" `
 
 ## Phase 3: 결과 저장
 
-### Step 3-1: 핵심 요약 생성
+### Step 3-1: 전체 대화 내역 및 핵심 요약 정리
 
-튜터링 세션 전체를 바탕으로 핵심 포인트 3~7개를 bullet point로 정리합니다.
+1. **전체 대화 기록(QA_HISTORY)**: Phase 2에서 진행된 모든 질문(User)과 답변(Assistant)을 생략 없이 텍스트로 누적합니다.
+2. **핵심 요약(SUMMARY)**: 전체 세션을 바탕으로 핵심 포인트 3~7개를 bullet point로 정리합니다.
 
-### Step 3-2: 통합 노트 저장
+### Step 3-2: 통합 노트 저장 (전체 내역 포함) ⭐
 
-```powershell
-$SOURCES = (Get-ChildItem "$OUTPUT_DIR\*.md" | ForEach-Object { $_.FullName }) -join ","
+```bash
+# 환경 변수 로드
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-python "$AGENT_ROOT\.agent\skills\obsidian-integration\scripts\save_to_obsidian.py" `
-  --topic "{TOPIC}" `
-  --content "{학습_내용_및_QA_기록}" `
-  --summary "{핵심_요약}" `
-  --category "AI_Study" `
-  --vault-path "$env:OBSIDIAN_VAULT_PATH" `
+# 소스 파일 목록 생성 (쉼표로 구분)
+SOURCES=$(ls "$OUTPUT_DIR"/*.md 2>/dev/null | tr '\n' ',' | sed 's/,$//')
+
+# --content 파라미터에 {QA_HISTORY}를 전달하여 전체 대화가 저장되도록 합니다.
+python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
+  --topic "{TOPIC}" \
+  --content "{전체_대화_기록_QA_HISTORY}" \
+  --summary "{핵심_요약_SUMMARY}" \
+  --category "AI_Study" \
+  --vault-path "$OBSIDIAN_VAULT_PATH/Agent" \
   --sources "$SOURCES"
 ```
+
+> 💡 **중요**: `{전체_대화_기록_QA_HISTORY}`에는 사용자와의 모든 대화 내용이 포함되어야 합니다. 요약본이 아닌 실제 대화 로그를 저장하세요.
 
 ### Step 3-3: 완료 메시지
 
