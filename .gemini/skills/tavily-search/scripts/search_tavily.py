@@ -350,6 +350,7 @@ def search_and_save(
     use_jina: bool = False,
     min_content_length: int = 200,
     jina_timeout: int = 15,
+    existing_urls: Optional[set] = None,
 ) -> List[str]:
     """
     Tavily API로 검색하고 결과를 개별 md 파일로 저장.
@@ -392,6 +393,7 @@ def search_and_save(
 
     created: List[str] = []
     skipped = 0
+    duplicate_count = 0
 
     # Tavily AI 요약 저장
     if response.get("answer"):
@@ -404,6 +406,13 @@ def search_and_save(
         url     = result.get("url", "")
         snippet = result.get("content", "")
         title   = result.get("title", "Untitled")
+
+        # 중복 URL 체크
+        if existing_urls is not None:
+            if url in existing_urls:
+                duplicate_count += 1
+                continue
+            existing_urls.add(url)
 
         full_content: Optional[str] = None
 
@@ -439,7 +448,8 @@ def search_and_save(
         created.append(path)
         print(f"  [saved {idx}] ({source_tag}) {Path(path).name}")
 
-    print(f"\n  {len(created)}개 저장, {skipped}개 필터됨 → {output_path}")
+    duplicate_info = f", {duplicate_count}개 중복 제외" if duplicate_count > 0 else ""
+    print(f"\n  {len(created)}개 저장{duplicate_info}, {skipped}개 필터됨 → {output_path}")
     return created
 
 
@@ -470,6 +480,7 @@ def main() -> int:
     queries = [q.strip() for q in args.queries.split(",")] if args.queries else [args.query]
 
     all_files: List[str] = []
+    existing_urls = set()
     for q in queries:
         try:
             files = search_and_save(
@@ -482,6 +493,7 @@ def main() -> int:
                 use_jina=args.use_jina,
                 min_content_length=args.min_content_length,
                 jina_timeout=args.jina_timeout,
+                existing_urls=existing_urls,
             )
             all_files.extend(files)
         except Exception as e:

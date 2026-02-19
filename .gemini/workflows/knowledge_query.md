@@ -19,28 +19,39 @@ BM25 RAG 검색으로 사용자 질문에 즉시 답변합니다.
 
 ### Step 1-1: 기존 RAG 목록 확인
 
-```powershell
-$RAG_ROOT = "$env:OBSIDIAN_VAULT_PATH\rag"
+```bash
+# 환경 변수 로드 및 AGENT_ROOT 설정
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-# 등록된 RAG manifest 목록 출력
-Get-ChildItem "$RAG_ROOT" -Directory | ForEach-Object {
-    $manifest = Get-Content "$($_.FullName)\manifest.json" | ConvertFrom-Json
-    [PSCustomObject]@{
-        Topic      = $manifest.topic
-        Files      = $manifest.file_count
-        Size_KB    = [math]::Round($manifest.total_bytes / 1024)
-        Updated    = $manifest.updated
-        SafeTopic  = $manifest.safe_topic
-    }
-} | Format-Table -AutoSize
+RAG_ROOT="$OBSIDIAN_VAULT_PATH/Agent/rag"
+
+# 등록된 RAG manifest 목록 출력 (Python 사용)
+python3 -c "
+import os, json, math
+rag_root = '$RAG_ROOT'
+print(f'{'Topic':<40} {'Files':<6} {'Size_KB':<8} {'Updated':<20} {'SafeTopic'}')
+print('-' * 90)
+if os.path.exists(rag_root):
+    for d in sorted(os.listdir(rag_root)):
+        manifest_path = os.path.join(rag_root, d, 'manifest.json')
+        if os.path.isfile(manifest_path):
+            try:
+                with open(manifest_path, 'r') as f:
+                    m = json.load(f)
+                    size_kb = math.ceil(m.get('total_bytes', 0) / 1024)
+                    print(f'{m.get('topic', '')[:38]:<40} {m.get('file_count', 0):<6} {size_kb:<8} {m.get('updated', '')[:19]:<20} {m.get('safe_topic', '')}')
+            except Exception:
+                continue
+"
 ```
 
 > **예시 출력:**
 > ```
-> Topic                            Files  Size_KB  Updated              SafeTopic
-> -----                            -----  -------  -------              ---------
-> Mamba SSM architecture           6      185      2026-02-19T15:48:00  Mamba_SSM_architecture...
-> NVIDIA 자율주행 기술 특징과 동향    6      142      2026-02-19T16:15:00  NVIDIA__________
+> Topic                                    Files  Size_KB  Updated              SafeTopic
+> ------------------------------------------------------------------------------------------
+> Mamba SSM architecture                   6      185      2026-02-19T15:48:00  Mamba_SSM_architecture...
+> NVIDIA 자율주행 기술 특징과 동향            6      142      2026-02-19T16:15:00  NVIDIA__________
 > ```
 
 ---
@@ -65,23 +76,30 @@ Get-ChildItem "$RAG_ROOT" -Directory | ForEach-Object {
 
 ### Step 1-3: Manifest에서 소스 경로 로드
 
-```powershell
-$SAFE_TOPIC = "{선택한_safe_topic}"
-$manifest = Get-Content "$RAG_ROOT\$SAFE_TOPIC\manifest.json" | ConvertFrom-Json
+```bash
+SAFE_TOPIC="{선택한_safe_topic}"
+if [ -f .env ]; then export $(cat .env | xargs); fi
+RAG_ROOT="$OBSIDIAN_VAULT_PATH/Agent/rag"
+MANIFEST_PATH="$RAG_ROOT/$SAFE_TOPIC/manifest.json"
 
-# source_dirs를 배열로 추출
-$SOURCE_DIRS = $manifest.source_dirs
-Write-Host "📂 소스 경로: $SOURCE_DIRS"
-Write-Host "📄 파일 수: $($manifest.file_count)개 ($([math]::Round($manifest.total_bytes/1024)) KB)"
+if [ -f "$MANIFEST_PATH" ]; then
+    # Python으로 정보 추출
+    eval $(python3 -c "
+import json
+with open('$MANIFEST_PATH', 'r') as f:
+    m = json.load(f)
+    print(f'SOURCE_DIRS=\"{','.join(m.get('source_dirs', []))}\"')
+    print(f'FILE_COUNT={m.get('file_count', 0)}')
+    print(f'TOTAL_KB={int(m.get('total_bytes', 0)/1024)}')
+")
+    echo "📂 소스 경로: $SOURCE_DIRS"
+    echo "📄 파일 수: $FILE_COUNT개 ($TOTAL_KB KB)"
+else
+    echo "⚠️ 소스 디렉토리를 찾을 수 없습니다: $MANIFEST_PATH"
+    echo "   knowledge_tutor로 재수집하시겠습니까? (y/n)"
+    # y 입력 시 Step 1-4로 이동
+fi
 ```
-
-소스 경로가 존재하지 않으면 (파일이 이동/삭제된 경우):
-```
-⚠️ 소스 디렉토리를 찾을 수 없습니다: {path}
-   knowledge_tutor로 재수집하시겠습니까? (y/n)
-```
-
-→ `y` 입력 시 Step 1-4로 이동
 
 ---
 
@@ -99,18 +117,21 @@ Write-Host "📄 파일 수: $($manifest.file_count)개 ($([math]::Round($manife
 
 #### 1-4-a: Tavily 검색 수집
 
-```powershell
-$AGENT_ROOT = "C:\Users\ldslj\OneDrive\문서\work\claude\knowledge_collector"
-$SAFE_TOPIC = "{TOPIC}" -replace '[ /]','_'
-$OUTPUT_DIR = "$env:OBSIDIAN_VAULT_PATH\sources\$SAFE_TOPIC"
+```bash
+# 환경 변수 로드 및 AGENT_ROOT 설정
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-python "$AGENT_ROOT\.agent\skills\tavily-search\scripts\search_tavily.py" `
-  --query "{TOPIC}" `
-  --output-dir "$OUTPUT_DIR" `
-  --max-results 5 `
-  --search-depth advanced `
-  --use-jina `
-  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" `
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
+OUTPUT_DIR="$OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+
+python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
+  --query "{TOPIC}" \
+  --output-dir "$OUTPUT_DIR" \
+  --max-results 5 \
+  --search-depth advanced \
+  --use-jina \
+  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" \
   --min-content-length 300
 ```
 
@@ -118,18 +139,19 @@ python "$AGENT_ROOT\.agent\skills\tavily-search\scripts\search_tavily.py" `
 
 #### 1-4-b: RAG Manifest 생성
 
-```powershell
-python "$AGENT_ROOT\.agent\skills\rag-retriever\scripts\create_manifest.py" `
-  --topic "{TOPIC}" `
-  --sources-dir "$OUTPUT_DIR" `
+```bash
+python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
+  --topic "{TOPIC}" \
+  --sources-dir "$OUTPUT_DIR" \
   --rag-root "$RAG_ROOT"
 ```
 
 #### 1-4-c: manifest 로드 후 Step 2로 진행
 
-```powershell
-$manifest = Get-Content "$RAG_ROOT\$SAFE_TOPIC\manifest.json" | ConvertFrom-Json
-$SOURCE_DIRS = $manifest.source_dirs
+```bash
+# Manifest 재로드
+MANIFEST_PATH="$RAG_ROOT/$SAFE_TOPIC/manifest.json"
+SOURCE_DIRS=$(python3 -c "import json; print(','.join(json.load(open('$MANIFEST_PATH'))['source_dirs']))")
 ```
 
 ---
@@ -147,25 +169,21 @@ $SOURCE_DIRS = $manifest.source_dirs
 
 ### Step 2-2: RAG 청크 검색 실행
 
-```powershell
-$AGENT_ROOT = "C:\Users\ldslj\OneDrive\문서\work\claude\knowledge_collector"
+```bash
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-# 단일 소스 디렉토리
-python "$AGENT_ROOT\.agent\skills\rag-retriever\scripts\retrieve_chunks.py" `
-  --query "{QUESTION}" `
-  --sources-dir $SOURCE_DIRS[0] `
-  --top-k 5 `
-  --chunk-size 800 `
-  --show-stats
+# 단일 소스 디렉토리 (SOURCE_DIRS가 쉼표로 구분된 문자열일 경우 처리)
+IFS=',' read -ra DIRS <<< "$SOURCE_DIRS"
 
-# 복수 소스 디렉토리 (전체 / 다중 토픽 선택 시)
-foreach ($dir in $SOURCE_DIRS) {
-    python "$AGENT_ROOT\.agent\skills\rag-retriever\scripts\retrieve_chunks.py" `
-      --query "{QUESTION}" `
-      --sources-dir $dir `
-      --top-k 3 `
-      --chunk-size 800
-}
+for dir in "${DIRS[@]}"; do
+    echo "=== [$dir] 검색 중 ==="
+    python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
+      --query "{QUESTION}" \
+      --sources-dir "$dir" \
+      --top-k 5 \
+      --chunk-size 800 \
+      --show-stats
+done
 ```
 
 > 💡 **top-k 조정 가이드:**
@@ -205,23 +223,34 @@ foreach ($dir in $SOURCE_DIRS) {
 
 사용자가 `[범위]`를 요청하거나 처음에 복수 토픽을 지정한 경우:
 
-```powershell
-# 선택한 복수 manifest에서 source_dirs 합산
-$ALL_DIRS = @()
-foreach ($safe in @("{topic1_safe}", "{topic2_safe}")) {
-    $m = Get-Content "$RAG_ROOT\$safe\manifest.json" | ConvertFrom-Json
-    $ALL_DIRS += $m.source_dirs
-}
+```bash
+# Python을 사용하여 여러 manifest의 source_dirs를 합침
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-# 각 dir에 대해 retrieve_chunks 실행 후 결과 합산
-foreach ($dir in $ALL_DIRS) {
-    Write-Host "=== [$dir] 검색 중 ==="
-    python "$AGENT_ROOT\.agent\skills\rag-retriever\scripts\retrieve_chunks.py" `
-      --query "{QUESTION}" `
-      --sources-dir $dir `
-      --top-k 3 `
+RAG_ROOT="$OBSIDIAN_VAULT_PATH/Agent/rag"
+
+ALL_DIRS=$(python3 -c "
+import json, os
+rag_root = '$RAG_ROOT'
+topics = '{topic1_safe},{topic2_safe}'.split(',')
+all_dirs = []
+for t in topics:
+    p = os.path.join(rag_root, t.strip(), 'manifest.json')
+    if os.path.exists(p):
+        all_dirs.extend(json.load(open(p))['source_dirs'])
+print(','.join(all_dirs))
+")
+
+IFS=',' read -ra DIRS <<< "$ALL_DIRS"
+for dir in "${DIRS[@]}"; do
+    echo "=== [$dir] 검색 중 ==="
+    python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
+      --query "{QUESTION}" \
+      --sources-dir "$dir" \
+      --top-k 3 \
       --chunk-size 800
-}
+done
 ```
 
 ---
@@ -233,18 +262,25 @@ foreach ($dir in $ALL_DIRS) {
 
 ---
 
-## Phase 3: 세션 Q&A Obsidian 저장 (선택)
+## Phase 3: 세션 Q&A Obsidian 저장 (전체 내역 포함)
 
-세션 Q&A를 저장하려면:
+세션 동안의 **모든 질문과 답변(QA_HISTORY)**을 생략 없이 누적하여 저장합니다.
 
-```powershell
-python "$AGENT_ROOT\.agent\skills\obsidian-integration\scripts\save_to_obsidian.py" `
-  --topic "{검색_주제}_조회" `
-  --content "{Q&A_기록}" `
-  --summary "{핵심_포인트}" `
-  --category "Knowledge_Query" `
-  --vault-path "$env:OBSIDIAN_VAULT_PATH"
+```bash
+# 환경 변수 로드
+if [ -f .env ]; then export $(cat .env | xargs); fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+# {Q&A_기록} 파라미터에 세션 전체 대화 로그를 전달합니다.
+python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
+  --topic "{검색_주제}_조회" \
+  --content "{전체_Q&A_기록_QA_HISTORY}" \
+  --summary "{핵심_포인트_SUMMARY}" \
+  --category "Knowledge_Query" \
+  --vault-path "$OBSIDIAN_VAULT_PATH/Agent"
 ```
+
+> 💡 **중요**: 요약이 아닌 실제 사용자와의 모든 문답 로그를 `{전체_Q&A_기록_QA_HISTORY}`에 포함하여 저장하세요.
 
 ---
 
