@@ -72,12 +72,16 @@ Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
 
 ### Step 1-1: 학습 주제 입력받기
 
-사용자에게 질문합니다:
+사용자에게 두 가지를 질문합니다:
 
-> **"어떤 주제를 학습하시겠습니까?"**  
-> 예: `PyTorch autograd 동작 원리`, `CXL memory pooling`, `NAND FTL 알고리즘`
+1. **"어떤 주제를 학습하시겠습니까?"**
+   예: `PyTorch autograd 동작 원리`, `CXL memory pooling`, `NVBit 메모리 추적`
 
-사용자의 답변을 `{TOPIC}` 변수에 저장합니다.
+2. **"어떤 카테고리에 분류하시겠습니까?"**
+   예: `PyTorch`, `CUDA`, `NVBit`, `자율주행`, `반도체`
+   (기존 카테고리 확인: `{OBSIDIAN_VAULT_PATH}/Agent/` 폴더 목록 참고)
+
+사용자의 답변을 `{TOPIC}`과 `{CATEGORY}` 변수에 저장합니다.
 
 ---
 
@@ -117,7 +121,9 @@ if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-OUTPUT_DIR="$OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
 
 # 검색 실행
 python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
@@ -146,7 +152,9 @@ if (Test-Path .env) {
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$OUTPUT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
 
 # 검색 실행
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
@@ -231,7 +239,9 @@ Remove-Item -Recurse -Force "$OUTPUT_DIR"
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_TOPIC=$(echo "{REFINED_TOPIC}" | tr ' /' '_')
-OUTPUT_DIR="$OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
 
 python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --query "{REFINED_TOPIC}" \
@@ -251,7 +261,9 @@ python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_TOPIC = "{REFINED_TOPIC}" -replace '[ /]', '_'
-$OUTPUT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
+$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
 
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
   --query "{REFINED_TOPIC}" `
@@ -289,12 +301,16 @@ python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-RAG_ROOT="$OBSIDIAN_VAULT_PATH/Agent/rag"
+SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+RAG_ROOT="$AGENT_DIR/$SAFE_CATEGORY/rag"
 
 python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --topic "{TOPIC}" \
   --sources-dir "$OUTPUT_DIR" \
-  --rag-root "$RAG_ROOT"
+  --rag-root "$RAG_ROOT" \
+  --vault-path "$OBSIDIAN_VAULT_PATH" \
+  --category "{CATEGORY}"
 ```
 
 </tab>
@@ -312,12 +328,16 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
-$RAG_ROOT = "$env:OBSIDIAN_VAULT_PATH/Agent/rag"
+$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$RAG_ROOT = "$AGENT_DIR/$SAFE_CATEGORY/rag"
 
 python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
   --topic "{TOPIC}" `
   --sources-dir "$OUTPUT_DIR" `
-  --rag-root "$RAG_ROOT"
+  --rag-root "$RAG_ROOT" `
+  --vault-path "$env:OBSIDIAN_VAULT_PATH" `
+  --category "{CATEGORY}"
 ```
 
 </tab>
@@ -449,8 +469,10 @@ if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-OUTPUT_DIR="$OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
-RAG_ROOT="$OBSIDIAN_VAULT_PATH/Agent/rag"
+SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
+RAG_ROOT="$AGENT_DIR/$SAFE_CATEGORY/rag"
 
 python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --query "{사용자_질문_키워드}" \
@@ -461,7 +483,8 @@ python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
 python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --topic "{TOPIC}" \
   --sources-dir "$OUTPUT_DIR" \
-  --rag-root "$RAG_ROOT"
+  --rag-root "$RAG_ROOT" \
+  --vault-path "$OBSIDIAN_VAULT_PATH"
 ```
 
 </tab>
@@ -479,8 +502,10 @@ if (Test-Path .env) {
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$OUTPUT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent/sources/$SAFE_TOPIC"
-$RAG_ROOT = "$env:OBSIDIAN_VAULT_PATH/Agent/rag"
+$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
+$RAG_ROOT = "$AGENT_DIR/$SAFE_CATEGORY/rag"
 
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
   --query "{사용자_질문_키워드}" `
@@ -491,7 +516,8 @@ python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
 python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
   --topic "{TOPIC}" `
   --sources-dir "$OUTPUT_DIR" `
-  --rag-root "$RAG_ROOT"
+  --rag-root "$RAG_ROOT" `
+  --vault-path "$env:OBSIDIAN_VAULT_PATH"
 ```
 
 </tab>
@@ -523,17 +549,22 @@ python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py"
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
+SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/sources/$(echo "{TOPIC}" | tr ' /' '_')"
+
 # 소스 파일 목록 생성 (쉼표로 구분)
 SOURCES=$(ls "$OUTPUT_DIR"/*.md 2>/dev/null | tr '\n' ',' | sed 's/,$//')
 
-# --content 파라미터에 {QA_HISTORY}를 전달하여 전체 대화가 저장되도록 합니다.
+# --append 플래그: 동일 주제 파일이 있으면 세션 블록 누적 추가, 없으면 새로 생성
 python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
   --topic "{TOPIC}" \
   --content "{전체_대화_기록_QA_HISTORY}" \
   --summary "{핵심_요약_SUMMARY}" \
   --category "AI_Study" \
-  --vault-path "$OBSIDIAN_VAULT_PATH/Agent" \
-  --sources "$SOURCES"
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY" \
+  --sources "$SOURCES" \
+  --append
 ```
 
 </tab>
@@ -550,18 +581,23 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
+$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/sources/$("{TOPIC}" -replace '[ /]', '_')"
+
 # 소스 파일 목록 생성 (쉼표로 구분)
 $SOURCES_LIST = Get-ChildItem -Path "$OUTPUT_DIR/*.md" | Select-Object -ExpandProperty FullName
 $SOURCES = $SOURCES_LIST -join ","
 
-# --content 파라미터에 {QA_HISTORY}를 전달하여 전체 대화가 저장되도록 합니다.
+# --append 플래그: 동일 주제 파일이 있으면 세션 블록 누적 추가, 없으면 새로 생성
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
   --topic "{TOPIC}" `
   --content "{전체_대화_기록_QA_HISTORY}" `
   --summary "{핵심_요약_SUMMARY}" `
   --category "AI_Study" `
-  --vault-path "$env:OBSIDIAN_VAULT_PATH/Agent" `
-  --sources "$SOURCES"
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY" `
+  --sources "$SOURCES" `
+  --append
 ```
 
 </tab>
@@ -569,18 +605,52 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
 
 > 💡 **중요**: `{전체_대화_기록_QA_HISTORY}`에는 사용자와의 모든 대화 내용이 포함되어야 합니다. 요약본이 아닌 실제 대화 로그를 저장하세요.
 
-### Step 3-3: 완료 메시지
+### Step 3-3: 대시보드 업데이트
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+
+python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" \
+  --agent-dir "$AGENT_DIR" \
+  --output "$AGENT_DIR/_Dashboard.md"
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+
+python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" `
+  --agent-dir "$AGENT_DIR" `
+  --output "$AGENT_DIR/_Dashboard.md"
+```
+
+</tab>
+</tabs>
+
+### Step 3-4: 완료 메시지
 
 ```
 ✅ 학습을 완료했습니다!
 
-📁 생성된 파일:
-  - 통합 노트: {OBSIDIAN_VAULT_PATH}/{날짜}_{TOPIC}.md
-  - 원본 자료: {OUTPUT_DIR}/ (총 N개 파일)
-  - RAG manifest: {OBSIDIAN_VAULT_PATH}/rag/{safe_topic}/manifest.json
+📁 생성/업데이트된 파일:
+  - 누적 노트: Agent/{CATEGORY}/{TOPIC}.md  ← 세션이 쌓일수록 기록이 누적됩니다
+  - 원본 자료: Agent/{CATEGORY}/sources/{safe_topic}/ (총 N개 파일)
+  - RAG manifest: Agent/{CATEGORY}/rag/{safe_topic}/manifest.json
+  - 대시보드: Agent/_Dashboard.md (업데이트됨)
 
+💡 같은 주제로 다음 세션을 진행하면 동일 노트에 '세션 2', '세션 3'... 이 추가됩니다.
 💡 다음에 이 주제를 다시 조회하려면:
-   /knowledge_query → '{TOPIC}' 선택
+   /knowledge_query → '{CATEGORY}/{safe_topic}' 선택
 
 Obsidian에서 확인해보세요! 🎉
 ```

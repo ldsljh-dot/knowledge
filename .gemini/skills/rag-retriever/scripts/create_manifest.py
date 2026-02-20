@@ -24,13 +24,27 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 
 def safe_filename(text: str) -> str:
     """공백/특수문자를 밑줄로 변환"""
     return "".join(c if c.isalnum() or c in "-_" else "_" for c in text).strip("_")
 
 
-def scan_sources(source_dirs: list[str]) -> dict:
+def to_relative(path: Path, vault_path: Path) -> str:
+    """vault_path 기준 상대경로로 변환. 실패 시 절대경로 반환."""
+    try:
+        return str(path.resolve().relative_to(vault_path.resolve()))
+    except ValueError:
+        return str(path.resolve())
+
+
+def scan_sources(source_dirs: list[str], vault_path: Path) -> dict:
     """소스 디렉토리의 .md 파일 목록과 통계를 수집"""
     files = []
     total_bytes = 0
@@ -42,7 +56,7 @@ def scan_sources(source_dirs: list[str]) -> dict:
         for md in sorted(p.glob("*.md")):
             size = md.stat().st_size
             files.append({
-                "path": str(md.resolve()),
+                "path": to_relative(md, vault_path),
                 "name": md.name,
                 "size_bytes": size,
             })
@@ -64,8 +78,16 @@ def main() -> int:
     parser.add_argument("--topic",       required=True,           help="토픽 이름 (자연어)")
     parser.add_argument("--sources-dir", required=True, nargs="+",help="소스 .md 파일 디렉토리 (복수 가능)")
     parser.add_argument("--rag-root",    required=True,           help="RAG 루트 폴더 (예: {vault}/rag)")
+    parser.add_argument("--vault-path",  default=None,            help="Obsidian vault 루트 경로 (미지정 시 OBSIDIAN_VAULT_PATH 환경변수 사용)")
+    parser.add_argument("--category",   default="",              help="주제 카테고리 (예: NVBit, PyTorch)")
     parser.add_argument("--tags",        nargs="*", default=[],   help="추가 태그")
     args = parser.parse_args()
+
+    vault_str = args.vault_path or os.environ.get("OBSIDIAN_VAULT_PATH", "")
+    if not vault_str:
+        print("[ERROR] --vault-path 또는 OBSIDIAN_VAULT_PATH 환경변수가 필요합니다.", file=sys.stderr)
+        return 1
+    vault_path = Path(vault_str)
 
     safe_topic = safe_filename(args.topic)
     rag_dir = Path(args.rag_root) / safe_topic
@@ -75,12 +97,14 @@ def main() -> int:
     now = datetime.now().isoformat(timespec="seconds")
     existing = load_existing(manifest_path)
 
-    scan = scan_sources(args.sources_dir)
+    scan = scan_sources(args.sources_dir, vault_path)
 
     manifest = {
         "topic":        args.topic,
         "safe_topic":   safe_topic,
-        "source_dirs":  [str(Path(d).resolve()) for d in args.sources_dir],
+        "category":     args.category,
+        "vault_path":   str(vault_path.resolve()),
+        "source_dirs":  [to_relative(Path(d), vault_path) for d in args.sources_dir],
         "files":        scan["files"],
         "file_count":   scan["file_count"],
         "total_bytes":  scan["total_bytes"],
