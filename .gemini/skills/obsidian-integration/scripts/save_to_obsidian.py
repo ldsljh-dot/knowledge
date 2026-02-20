@@ -4,6 +4,7 @@ Obsidian Integration Skill
 학습 내용을 Obsidian vault에 표준 형식으로 저장.
 
 Usage:
+    # 새 파일 생성 (기존 동작)
     python scripts/save_to_obsidian.py \
       --topic "PyTorch FX Graph" \
       --content "Q&A 기록..." \
@@ -11,9 +12,19 @@ Usage:
       --category "AI_Study" \
       --vault-path "/path/to/vault" \
       --sources "file1.md,file2.md"
+
+    # 기존 노트에 세션 누적 추가
+    python scripts/save_to_obsidian.py \
+      --topic "PyTorch FX Graph" \
+      --content "Q&A 기록..." \
+      --summary "핵심 요약..." \
+      --category "AI_Study" \
+      --vault-path "/path/to/vault" \
+      --append
 """
 
 import os
+import re
 import sys
 import argparse
 from datetime import datetime
@@ -84,7 +95,7 @@ def build_note(
     sources: Optional[List[str]],
     status: str,
 ) -> str:
-    """Obsidian 노트 텍스트 생성"""
+    """Obsidian 노트 텍스트 생성 (기존 단일 세션 형식)"""
     now_str  = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     # wikilinks
@@ -168,6 +179,143 @@ def save_note(
     return str(filepath)
 
 
+# ────────────────────── 누적 세션 저장 ──────────────────────
+
+def find_existing_note(vault: Path, safe_topic: str) -> Optional[Path]:
+    """기존 누적 노트 파일 찾기 (날짜 없는 파일명 우선)"""
+    candidate = vault / f"{safe_topic}.md"
+    if candidate.exists():
+        return candidate
+    return None
+
+
+def count_sessions(text: str) -> int:
+    """노트 내 세션 블록 개수 계산"""
+    return len(re.findall(r"^## 🗓️ 세션 \d+", text, re.MULTILINE))
+
+
+def build_accumulated_note(
+    topic: str,
+    content: str,
+    summary: str,
+    category: str,
+    sources: Optional[List[str]],
+    status: str,
+    now_str: str,
+) -> str:
+    """누적 노트 초기 생성 (세션 1 포함)"""
+    wikilinks_yaml = "  []"
+    source_section = "_없음_"
+
+    if sources:
+        yaml_lines = [f'  - "[[{Path(s).stem}]]"' for s in sources]
+        wikilinks_yaml = "\n".join(yaml_lines)
+
+        md_lines = []
+        for s in sources:
+            stem  = Path(s).stem
+            title = extract_title(s) if Path(s).exists() else stem
+            md_lines.append(f"- [[{stem}]] - {title}")
+        source_section = "\n".join(md_lines)
+
+    frontmatter = f"""---
+created: {now_str}
+updated: {now_str}
+tags: [AI_Study, {category}]
+category: {category}
+status: {status}
+sources:
+{wikilinks_yaml}
+---"""
+
+    session_block = f"""---
+
+## 🗓️ 세션 1 — {now_str}
+
+{content.strip()}"""
+
+    if summary.strip():
+        session_block += f"\n\n### 🎯 핵심 요약\n{summary.strip()}"
+
+    note = f"""{frontmatter}
+
+# 📚 {topic}
+
+## 📖 원본 자료
+{source_section}
+
+## 🔗 관련 개념
+<!-- 나중에 채워주세요 -->
+
+{session_block}
+"""
+    return note
+
+
+def append_session(
+    topic: str,
+    content: str,
+    summary: str,
+    category: str,
+    vault_path: str,
+    sources: Optional[List[str]] = None,
+    status: str = "🌿 seed",
+) -> str:
+    """
+    기존 누적 노트에 새 세션 추가. 없으면 새 파일 생성.
+
+    Returns:
+        저장된 파일의 절대경로 문자열
+    """
+    vault = Path(vault_path)
+    vault.mkdir(parents=True, exist_ok=True)
+
+    safe_topic = safe_filename(topic)
+    now_str    = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    existing = find_existing_note(vault, safe_topic)
+
+    if existing:
+        old_text = existing.read_text(encoding="utf-8")
+
+        # 세션 번호 계산
+        session_num = count_sessions(old_text) + 1
+
+        # frontmatter updated 필드 갱신
+        new_text = re.sub(
+            r"^(updated:\s*).*$",
+            f"\\g<1>{now_str}",
+            old_text,
+            flags=re.MULTILINE,
+        )
+
+        # 세션 블록 구성
+        session_block = f"\n---\n\n## 🗓️ 세션 {session_num} — {now_str}\n\n{content.strip()}"
+        if summary.strip():
+            session_block += f"\n\n### 🎯 핵심 요약\n{summary.strip()}"
+        session_block += "\n"
+
+        new_text = new_text.rstrip() + "\n" + session_block
+        existing.write_text(new_text, encoding="utf-8")
+        print(f"📎 세션 {session_num} 추가됨")
+        return str(existing)
+    else:
+        # 새 누적 파일 생성 (날짜 없는 파일명)
+        filepath = vault / f"{safe_topic}.md"
+        note_text = build_accumulated_note(
+            topic=topic,
+            content=content,
+            summary=summary,
+            category=category,
+            sources=sources,
+            status=status,
+            now_str=now_str,
+        )
+        filepath.write_text(note_text, encoding="utf-8")
+        print("📄 새 누적 노트 생성됨 (세션 1)")
+        return str(filepath)
+
+
 # ────────────────────────── CLI ──────────────────────────
 
 def main() -> int:
@@ -188,6 +336,11 @@ def main() -> int:
         default="🌿 seed",
         choices=["🌿 seed", "🌱 sprout", "🌳 tree"],
     )
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="기존 노트에 세션을 누적 추가 (없으면 새로 생성)",
+    )
     args = parser.parse_args()
 
     sources = (
@@ -196,15 +349,26 @@ def main() -> int:
     )
 
     try:
-        filepath = save_note(
-            topic=args.topic,
-            content=args.content,
-            summary=args.summary,
-            category=args.category,
-            vault_path=args.vault_path,
-            sources=sources,
-            status=args.status,
-        )
+        if args.append:
+            filepath = append_session(
+                topic=args.topic,
+                content=args.content,
+                summary=args.summary,
+                category=args.category,
+                vault_path=args.vault_path,
+                sources=sources,
+                status=args.status,
+            )
+        else:
+            filepath = save_note(
+                topic=args.topic,
+                content=args.content,
+                summary=args.summary,
+                category=args.category,
+                vault_path=args.vault_path,
+                sources=sources,
+                status=args.status,
+            )
         print(f"✅ 저장 완료!")
         print(f"📁 {filepath}")
         return 0
