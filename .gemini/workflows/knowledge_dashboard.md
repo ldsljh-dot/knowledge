@@ -108,14 +108,10 @@ else:
         topics = categories[cat]
         cat_bytes = sum(t["total_bytes"] for t in topics)
         print(f"\n  🗂  {cat}  ({len(topics)}개 토픽 / {fmt_size(cat_bytes)})")
-        print(f"  {'토픽':<42} {'파일':>5}  {'크기':>8}  {'업데이트'}")
-        print(f"  {'-'*42}  {'-'*5}  {'-'*8}  {'-'*10}")
         for t in sorted(topics, key=lambda x: x["topic"]):
             status = "✓" if t["has_sources"] else "⚠"
-            name = t["topic"]
-            if len(name) > 40:
-                name = name[:38] + ".."
-            print(f"  {status} {name:<40}  {t['file_count']:>5}  {fmt_size(t['total_bytes']):>8}  {t['updated']}")
+            print(f"    {status} {t['topic']}")
+            print(f"       파일 {t['file_count']}개  /  {fmt_size(t['total_bytes'])}  /  {t['updated']}")
 
 print()
 print("=" * 60)
@@ -183,8 +179,8 @@ for cat in sorted(categories):
     print(f'  {cat}  ({len(topics)}개 토픽 / {fmt_size(cat_bytes)})')
     for t in sorted(topics, key=lambda x: x['topic']):
         status = 'V' if t['has_sources'] else '!'
-        name = t['topic'][:38] + '..' if len(t['topic']) > 40 else t['topic']
-        print(f'  {status} {name:<40}  {t[\"file_count\"]:>5}  {fmt_size(t[\"total_bytes\"]):>8}  {t[\"updated\"]}')
+        print(f'    {status} {t[\"topic\"]}')
+        print(f'       파일 {t[\"file_count\"]}개  /  {fmt_size(t[\"total_bytes\"])}  /  {t[\"updated\"]}')
 print(f'  합계: 파일 {grand_files}개  /  {fmt_size(grand_bytes)}')
 "
 ```
@@ -196,13 +192,19 @@ print(f'  합계: 파일 {grand_files}개  /  {fmt_size(grand_bytes)}')
 ```
 ============================================================
   📚 Knowledge Dashboard
-  2026-02-21  |  카테고리 4개  |  토픽 7개  |  12.3MB
+  2026-02-21  |  카테고리 3개  |  토픽 5개  |  2.2MB
 ============================================================
 
-  🗂  AI_Study  (4개 토픽 / 8.5MB)
-  토픽                                        파일    크기      업데이트
-  ------------------------------------------  -----  --------  ----------
-  ✓ MemoryLLM Research                            3     354KB  2026-02-21
-  ✓ NVBit H100 DSM TMA profiling..              14     1.2MB   2026-02-19
+  🗂  AI_Study  (3개 토픽 / 1.8MB)
+    ✓ MemoryLLM Research
+       파일 3개  /  124KB  /  2026-02-21
+    ✓ NVBit H100 DSM TMA profiling and address detection
+       파일 14개  /  1.3MB  /  2026-02-19
+    ✓ NVIDIA H100 GPU Cache structure and principles
+       파일 9개  /  297KB  /  2026-02-19
+
+  🗂  DB_Research  (1개 토픽 / 354KB)
+    ✓ PolarStore Research
+       파일 6개  /  354KB  /  2026-02-21
   ...
 ```
