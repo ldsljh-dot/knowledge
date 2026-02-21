@@ -13,6 +13,7 @@ Usage:
 """
 
 import os
+import re
 import sys
 import argparse
 import urllib.request
@@ -36,6 +37,49 @@ except ImportError:
 
 
 # ────────────────────────── 유틸 ──────────────────────────
+
+def normalize_url(url: str) -> str:
+    """URL을 정규화하여 같은 논문의 다른 URL 형태를 동일하게 처리.
+
+    - arXiv: /pdf/, /abs/, /html/ 경로 → 'arxiv:{id}' (버전 번호 제거)
+    - OpenReview: ?id=... 파라미터 → 'openreview:{id}'
+    - 기타: 소문자 변환 + 후행 슬래시 제거
+    """
+    url = url.strip()
+    # arXiv: pdf/abs/html 경로에서 논문 ID 추출
+    m = re.search(r'arxiv\.org/(?:pdf|abs|html)/([0-9]{4}\.[0-9]+)', url, re.IGNORECASE)
+    if m:
+        arxiv_id = m.group(1)  # 버전(v1, v2...) 앞까지만 (이미 미포함)
+        return f"arxiv:{arxiv_id}"
+    # OpenReview: id= 파라미터 추출
+    if 'openreview.net' in url.lower():
+        m = re.search(r'[?&]id=([^&]+)', url)
+        if m:
+            return f"openreview:{m.group(1)}"
+    # 기타: 소문자 + trailing slash 제거
+    return url.lower().rstrip('/')
+
+
+def load_existing_urls(output_dir: Path) -> set:
+    """output_dir의 기존 .md 파일에서 source_url frontmatter를 읽어 정규화된 URL 집합 반환.
+
+    이전 실행에서 이미 수집된 URL을 파악하여 재실행 시 중복 다운로드를 방지한다.
+    """
+    urls: set = set()
+    if not output_dir.exists():
+        return urls
+    for md_file in output_dir.glob("*.md"):
+        try:
+            for line in md_file.read_text(encoding="utf-8", errors="replace").splitlines()[:20]:
+                if line.startswith("source_url:"):
+                    raw_url = line[len("source_url:"):].strip()
+                    if raw_url:
+                        urls.add(normalize_url(raw_url))
+                    break
+        except Exception:
+            pass
+    return urls
+
 
 def safe_filename(text: str) -> str:
     """텍스트를 안전한 파일명으로 변환 (영숫자 + 언더바)"""
@@ -442,12 +486,14 @@ def search_and_save(
         snippet = result.get("content", "")
         title   = result.get("title", "Untitled")
 
-        # 중복 URL 체크
+        # 중복 URL 체크 (정규화 후 비교 — arXiv pdf/abs/html 등 동일 논문 다른 URL 형태 처리)
         if existing_urls is not None:
-            if url in existing_urls:
+            normalized = normalize_url(url)
+            if normalized in existing_urls:
                 duplicate_count += 1
+                print(f"  [skip {idx}] 중복 URL (정규화): {normalized}")
                 continue
-            existing_urls.add(url)
+            existing_urls.add(normalized)
 
         full_content: Optional[str] = None
 
@@ -523,7 +569,10 @@ def main() -> int:
     queries = [q.strip() for q in args.queries.split(",")] if args.queries else [args.query]
 
     all_files: List[str] = []
-    existing_urls = set()
+    # 이전 실행에서 수집된 URL을 로드하여 재실행 시 중복 방지
+    existing_urls = load_existing_urls(Path(args.output_dir))
+    if existing_urls:
+        print(f"[중복 방지] 기존 수집 파일에서 {len(existing_urls)}개 URL 로드됨 (재실행 중복 방지)")
     for q in queries:
         try:
             files = search_and_save(

@@ -77,7 +77,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="RAG manifest 생성/업데이트")
     parser.add_argument("--topic",       required=True,           help="토픽 이름 (자연어)")
     parser.add_argument("--sources-dir", required=True, nargs="+",help="소스 .md 파일 디렉토리 (복수 가능)")
-    parser.add_argument("--rag-root",    required=True,           help="RAG 루트 폴더 (예: {vault}/rag)")
+    parser.add_argument("--rag-root",    default="",              help="RAG 루트 폴더 (예: {vault}/rag). --output-dir 미지정 시 사용.")
+    parser.add_argument("--output-dir",  default="",              help="manifest.json이 저장될 정확한 폴더 경로 (topic 하위폴더 생성 안 함)")
     parser.add_argument("--vault-path",  default=None,            help="Obsidian vault 루트 경로 (미지정 시 OBSIDIAN_VAULT_PATH 환경변수 사용)")
     parser.add_argument("--category",   default="",              help="주제 카테고리 (예: NVBit, PyTorch)")
     parser.add_argument("--tags",        nargs="*", default=[],   help="추가 태그")
@@ -90,7 +91,15 @@ def main() -> int:
     vault_path = Path(vault_str)
 
     safe_topic = safe_filename(args.topic)
-    rag_dir = Path(args.rag_root) / safe_topic
+    
+    if args.output_dir:
+        rag_dir = Path(args.output_dir)
+    elif args.rag_root:
+        rag_dir = Path(args.rag_root) / safe_topic
+    else:
+        print("[ERROR] --rag-root 또는 --output-dir 중 하나는 필수입니다.", file=sys.stderr)
+        return 1
+
     rag_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = rag_dir / "manifest.json"
 

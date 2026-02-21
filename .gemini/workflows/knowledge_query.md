@@ -86,12 +86,18 @@ print(f'{'식별자 (Category/SafeTopic)':<45} {'Topic':<35} {'파일':<5} {'KB'
 print('-' * 105)
 if os.path.exists(agent_dir):
     for category in sorted(os.listdir(agent_dir)):
-        rag_dir = os.path.join(agent_dir, category, 'rag')
-        if not os.path.isdir(rag_dir):
+        cat_dir = os.path.join(agent_dir, category)
+        if not os.path.isdir(cat_dir):
             continue
+        
         printed_header = False
-        for d in sorted(os.listdir(rag_dir)):
-            manifest_path = os.path.join(rag_dir, d, 'manifest.json')
+        # cat_dir 내의 폴더들을 topic으로 간주하고 rag/manifest.json 확인
+        for d in sorted(os.listdir(cat_dir)):
+            topic_dir = os.path.join(cat_dir, d)
+            if not os.path.isdir(topic_dir):
+                continue
+                
+            manifest_path = os.path.join(topic_dir, 'rag', 'manifest.json')
             if not os.path.isfile(manifest_path):
                 continue
             try:
@@ -134,12 +140,17 @@ print(f'{'식별자 (Category/SafeTopic)':<45} {'Topic':<35} {'파일':<5} {'KB'
 print('-' * 105)
 if os.path.exists(agent_dir):
     for category in sorted(os.listdir(agent_dir)):
-        rag_dir = os.path.join(agent_dir, category, 'rag')
-        if not os.path.isdir(rag_dir):
+        cat_dir = os.path.join(agent_dir, category)
+        if not os.path.isdir(cat_dir):
             continue
+        
         printed_header = False
-        for d in sorted(os.listdir(rag_dir)):
-            manifest_path = os.path.join(rag_dir, d, 'manifest.json')
+        for d in sorted(os.listdir(cat_dir)):
+            topic_dir = os.path.join(cat_dir, d)
+            if not os.path.isdir(topic_dir):
+                continue
+
+            manifest_path = os.path.join(topic_dir, 'rag', 'manifest.json')
             if not os.path.isfile(manifest_path):
                 continue
             try:
@@ -200,7 +211,7 @@ if [ -f .env ]; then set -a; source .env; set +a; fi
 CATEGORY="${SELECTION%%/*}"
 SAFE_TOPIC="${SELECTION##*/}"
 AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
-MANIFEST_PATH="$AGENT_DIR/$CATEGORY/rag/$SAFE_TOPIC/manifest.json"
+MANIFEST_PATH="$AGENT_DIR/$CATEGORY/$SAFE_TOPIC/rag/manifest.json"
 
 if [ -f "$MANIFEST_PATH" ]; then
     eval $(python3 -c "
@@ -238,7 +249,7 @@ if (Test-Path .env) {
 $CATEGORY  = $SELECTION.Split('/')[0]
 $SAFE_TOPIC = $SELECTION.Split('/', 2)[1]
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
-$MANIFEST_PATH = "$AGENT_DIR/$CATEGORY/rag/$SAFE_TOPIC/manifest.json"
+$MANIFEST_PATH = "$AGENT_DIR/$CATEGORY/$SAFE_TOPIC/rag/manifest.json"
 
 if (Test-Path $MANIFEST_PATH) {
     $MANIFEST_PATH_PY = $MANIFEST_PATH -replace '\\', '/'
@@ -296,7 +307,7 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
 AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
-OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
 python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --query "{TOPIC}" \
@@ -325,7 +336,7 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
-$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
   --query "{TOPIC}" `
@@ -348,12 +359,16 @@ python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
 <tab label="Linux/macOS (Bash)">
 
 ```bash
-RAG_ROOT="$AGENT_DIR/$SAFE_CATEGORY/rag"
+SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
+AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+RAG_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
 
 python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --topic "{TOPIC}" \
   --sources-dir "$OUTPUT_DIR" \
-  --rag-root "$RAG_ROOT" \
+  --output-dir "$RAG_DIR" \
   --vault-path "$OBSIDIAN_VAULT_PATH" \
   --category "{CATEGORY}"
 ```
@@ -362,12 +377,16 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
 <tab label="Windows (PowerShell)">
 
 ```powershell
-$RAG_ROOT = "$AGENT_DIR/$SAFE_CATEGORY/rag"
+$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+$RAG_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
 
 python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
   --topic "{TOPIC}" `
   --sources-dir "$OUTPUT_DIR" `
-  --rag-root "$RAG_ROOT" `
+  --output-dir "$RAG_DIR" `
   --vault-path "$env:OBSIDIAN_VAULT_PATH" `
   --category "{CATEGORY}"
 ```
@@ -382,7 +401,7 @@ python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py"
 
 ```bash
 # Manifest 재로드
-MANIFEST_PATH="$AGENT_DIR/$SAFE_CATEGORY/rag/$SAFE_TOPIC/manifest.json"
+MANIFEST_PATH="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag/manifest.json"
 SOURCE_DIRS=$(python3 -c "
 import json, os
 m = json.load(open('$MANIFEST_PATH'))
@@ -397,7 +416,7 @@ print(','.join(dirs))
 
 ```powershell
 # Manifest 재로드
-$MANIFEST_PATH = "$AGENT_DIR/$SAFE_CATEGORY/rag/$SAFE_TOPIC/manifest.json"
+$MANIFEST_PATH = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag/manifest.json"
 $MANIFEST_PATH_PY2 = $MANIFEST_PATH -replace '\\', '/'
 $SOURCE_DIRS = python -c "
 import json, os
@@ -564,9 +583,15 @@ score_grade:
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
+SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
+AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+RAG_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
+
 python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --query "{현재_질문_또는_TOPIC}" \
-  --output-dir "{OUTPUT_DIR}" \
+  --output-dir "$OUTPUT_DIR" \
   --max-results 3 \
   --search-depth advanced \
   --use-jina \
@@ -575,8 +600,8 @@ python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
 
 python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --topic "{TOPIC}" \
-  --sources-dir "{OUTPUT_DIR}" \
-  --rag-root "$RAG_ROOT" \
+  --sources-dir "$OUTPUT_DIR" \
+  --output-dir "$RAG_DIR" \
   --vault-path "$OBSIDIAN_VAULT_PATH" \
   --category "{CATEGORY}"
 ```
@@ -595,9 +620,15 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
+$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+$RAG_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
+
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
   --query "{현재_질문_또는_TOPIC}" `
-  --output-dir "{OUTPUT_DIR}" `
+  --output-dir "$OUTPUT_DIR" `
   --max-results 3 `
   --search-depth advanced `
   --use-jina `
@@ -606,8 +637,8 @@ python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
 
 python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
   --topic "{TOPIC}" `
-  --sources-dir "{OUTPUT_DIR}" `
-  --rag-root "$RAG_ROOT" `
+  --sources-dir "$OUTPUT_DIR" `
+  --output-dir "$RAG_DIR" `
   --vault-path "$env:OBSIDIAN_VAULT_PATH" `
   --category "{CATEGORY}"
 ```
@@ -652,7 +683,7 @@ for ident in identifiers:
     if len(parts) != 2:
         continue
     category, safe_topic = parts
-    p = os.path.join(agent_dir, category, 'rag', safe_topic, 'manifest.json')
+    p = os.path.join(agent_dir, category, safe_topic, 'rag', 'manifest.json')
     if os.path.exists(p):
         m = json.load(open(p))
         vault = m.get('vault_path') or os.environ.get('OBSIDIAN_VAULT_PATH', '')
@@ -704,7 +735,7 @@ for ident in identifiers:
     if len(parts) != 2:
         continue
     category, safe_topic = parts
-    p = os.path.join(agent_dir, category, 'rag', safe_topic, 'manifest.json')
+    p = os.path.join(agent_dir, category, safe_topic, 'rag', 'manifest.json')
     if os.path.exists(p):
         m = json.load(open(p))
         vault = m.get('vault_path') or os.environ.get('OBSIDIAN_VAULT_PATH', '')

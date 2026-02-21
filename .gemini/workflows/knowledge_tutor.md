@@ -123,7 +123,7 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
-OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
 # 검색 실행
 python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
@@ -154,7 +154,7 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
-$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
 # 검색 실행
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
@@ -241,7 +241,7 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 SAFE_TOPIC=$(echo "{REFINED_TOPIC}" | tr ' /' '_')
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
-OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
 python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --query "{REFINED_TOPIC}" \
@@ -263,7 +263,7 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 $SAFE_TOPIC = "{REFINED_TOPIC}" -replace '[ /]', '_'
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
-$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
   --query "{REFINED_TOPIC}" `
@@ -301,14 +301,16 @@ python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
-RAG_ROOT="$AGENT_DIR/$SAFE_CATEGORY/rag"
+SOURCES_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+RAG_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
 
 python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --topic "{TOPIC}" \
-  --sources-dir "$OUTPUT_DIR" \
-  --rag-root "$RAG_ROOT" \
+  --sources-dir "$SOURCES_DIR" \
+  --output-dir "$RAG_DIR" \
   --vault-path "$OBSIDIAN_VAULT_PATH" \
   --category "{CATEGORY}"
 ```
@@ -328,14 +330,16 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
-$RAG_ROOT = "$AGENT_DIR/$SAFE_CATEGORY/rag"
+$SOURCES_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+$RAG_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
 
 python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
   --topic "{TOPIC}" `
-  --sources-dir "$OUTPUT_DIR" `
-  --rag-root "$RAG_ROOT" `
+  --sources-dir "$SOURCES_DIR" `
+  --output-dir "$RAG_DIR" `
   --vault-path "$env:OBSIDIAN_VAULT_PATH" `
   --category "{CATEGORY}"
 ```
@@ -522,6 +526,12 @@ score_grade:
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
+SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+RAG_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
+
 python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --query "{현재_질문_또는_TOPIC}" \
   --output-dir "$OUTPUT_DIR" \
@@ -534,7 +544,7 @@ python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
 python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --topic "{TOPIC}" \
   --sources-dir "$OUTPUT_DIR" \
-  --rag-root "$RAG_ROOT" \
+  --output-dir "$RAG_DIR" \
   --vault-path "$OBSIDIAN_VAULT_PATH" \
   --category "{CATEGORY}"
 ```
@@ -553,6 +563,12 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
+$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+$RAG_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
+
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
   --query "{현재_질문_또는_TOPIC}" `
   --output-dir "$OUTPUT_DIR" `
@@ -565,7 +581,7 @@ python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
 python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
   --topic "{TOPIC}" `
   --sources-dir "$OUTPUT_DIR" `
-  --rag-root "$RAG_ROOT" `
+  --output-dir "$RAG_DIR" `
   --vault-path "$env:OBSIDIAN_VAULT_PATH" `
   --category "{CATEGORY}"
 ```
@@ -597,8 +613,8 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
-OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
-RAG_ROOT="$AGENT_DIR/$SAFE_CATEGORY/rag"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+RAG_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
 
 python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --query "{사용자_질문_키워드}" \
@@ -609,7 +625,7 @@ python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
 python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --topic "{TOPIC}" \
   --sources-dir "$OUTPUT_DIR" \
-  --rag-root "$RAG_ROOT" \
+  --output-dir "$RAG_DIR" \
   --vault-path "$OBSIDIAN_VAULT_PATH"
 ```
 
@@ -630,8 +646,8 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
-$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/sources/$SAFE_TOPIC"
-$RAG_ROOT = "$AGENT_DIR/$SAFE_CATEGORY/rag"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+$RAG_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
 
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
   --query "{사용자_질문_키워드}" `
@@ -642,7 +658,7 @@ python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
 python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
   --topic "{TOPIC}" `
   --sources-dir "$OUTPUT_DIR" `
-  --rag-root "$RAG_ROOT" `
+  --output-dir "$RAG_DIR" `
   --vault-path "$env:OBSIDIAN_VAULT_PATH"
 ```
 
@@ -675,9 +691,10 @@ python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py"
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
-OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/sources/$(echo "{TOPIC}" | tr ' /' '_')"
+OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
 # 소스 파일 목록 생성 (쉼표로 구분)
 SOURCES=$(ls "$OUTPUT_DIR"/*.md 2>/dev/null | tr '\n' ',' | sed 's/,$//')
@@ -707,9 +724,10 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
-$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/sources/$("{TOPIC}" -replace '[ /]', '_')"
+$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
 # 소스 파일 목록 생성 (쉼표로 구분)
 $SOURCES_LIST = Get-ChildItem -Path "$OUTPUT_DIR/*.md" | Select-Object -ExpandProperty FullName

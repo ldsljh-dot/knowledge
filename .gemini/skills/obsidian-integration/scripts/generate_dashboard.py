@@ -22,7 +22,7 @@ def load_manifests(agent_dir: Path) -> dict[str, list[dict]]:
     """agent_dir/{Category}/rag/{topic}/manifest.json 을 카테고리별로 수집"""
     categories: dict[str, list[dict]] = {}
 
-    for manifest_path in sorted(agent_dir.glob("*/rag/*/manifest.json")):
+    for manifest_path in sorted(agent_dir.glob("*/*/rag/manifest.json")):
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except Exception:
