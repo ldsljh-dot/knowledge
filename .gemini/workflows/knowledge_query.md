@@ -281,6 +281,126 @@ print(f'TOTAL_KB={int(m.get(\"total_bytes\", 0)/1024)}')
 
 ---
 
+### Step 1-3b: 이전 학습 기록 확인 및 로드
+
+manifest 로드 직후, 해당 카테고리 폴더에서 이전 학습 기록을 자동 탐색합니다.
+이전 기록이 있으면 **어디까지 배웠는지 요약**하여 표시하고, 이어서 학습을 진행합니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+# CATEGORY, SAFE_TOPIC, TOPIC은 Step 1-3에서 설정된 변수 사용
+AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+
+python3 -c "
+import os, glob
+
+cat_dir = os.path.join('$AGENT_DIR', '$CATEGORY')
+topic = '$TOPIC'
+safe_topic = '$SAFE_TOPIC'
+
+# 1. 종합 누적 노트 탐색: knowledge_tutor가 --append로 생성한 파일
+cumulative = []
+for candidate in [
+    os.path.join(cat_dir, topic + '.md'),
+    os.path.join(cat_dir, safe_topic + '.md'),
+]:
+    if os.path.isfile(candidate):
+        cumulative.append(candidate)
+
+# 2. 세션 노트 탐색: 날짜_topic 또는 topic_조회 패턴
+session_notes = []
+for f in glob.glob(os.path.join(cat_dir, f'*{safe_topic}*.md')):
+    bn = os.path.basename(f)
+    # 누적 노트 자체는 제외
+    if bn not in [topic + '.md', safe_topic + '.md']:
+        session_notes.append(f)
+session_notes.sort(key=os.path.getmtime, reverse=True)
+
+# 결과 출력
+found = cumulative + session_notes
+if found:
+    print('PREV_NOTES_FOUND=true')
+    for f in cumulative:
+        print(f'CUMULATIVE_NOTE={f}')
+    for f in session_notes[:3]:  # 최근 3개만
+        print(f'SESSION_NOTE={f}')
+else:
+    print('PREV_NOTES_FOUND=false')
+"
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+# CATEGORY, SAFE_TOPIC, TOPIC은 Step 1-3에서 설정된 변수 사용
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR_PY = $AGENT_DIR -replace '\\', '/'
+
+python -c "
+import os, glob
+
+cat_dir = os.path.join('$AGENT_DIR_PY', '$CATEGORY')
+topic = '$TOPIC'
+safe_topic = '$SAFE_TOPIC'
+
+cumulative = []
+for candidate in [
+    os.path.join(cat_dir, topic + '.md'),
+    os.path.join(cat_dir, safe_topic + '.md'),
+]:
+    if os.path.isfile(candidate):
+        cumulative.append(candidate)
+
+session_notes = []
+for f in glob.glob(os.path.join(cat_dir, f'*{safe_topic}*.md')):
+    bn = os.path.basename(f)
+    if bn not in [topic + '.md', safe_topic + '.md']:
+        session_notes.append(f)
+session_notes.sort(key=os.path.getmtime, reverse=True)
+
+found = cumulative + session_notes
+if found:
+    print('PREV_NOTES_FOUND=true')
+    for f in cumulative:
+        print(f'CUMULATIVE_NOTE={f}')
+    for f in session_notes[:3]:
+        print(f'SESSION_NOTE={f}')
+else:
+    print('PREV_NOTES_FOUND=false')
+"
+```
+
+</tab>
+</tabs>
+
+**탐색 결과별 처리:**
+
+| 결과 | 처리 |
+|------|------|
+| `PREV_NOTES_FOUND=true` + `CUMULATIVE_NOTE` 있음 | 종합 누적 노트를 읽어 이전 학습 이력 요약 → 표시 후 이어서 진행 |
+| `PREV_NOTES_FOUND=true` + 세션 노트만 있음 | 가장 최근 세션 노트에서 핵심 요약 추출 → 표시 후 이어서 진행 |
+| `PREV_NOTES_FOUND=false` | "이전 학습 기록 없음, 새 세션 시작" 안내 후 Phase 2 진행 |
+
+**이전 기록 발견 시** — 파일 내용을 읽어 다음 형식으로 표시:
+
+```
+📖 이전 학습 기록을 불러왔습니다.
+
+[마지막 세션: {최근_날짜}]
+{학습한_핵심_개념 bullet 3~7개}
+
+이어서 학습을 진행합니다.
+아직 다루지 않은 내용이나 더 깊이 알고 싶은 내용을 질문해 주세요.
+```
+
+> **중요**: 이전 기록을 읽을 때는 `CUMULATIVE_NOTE` 파일 전체를 Read 도구로 읽어 세션 이력을 파악한다.
+> 세션 노트는 최신 파일 1개만 읽으면 충분하다 (중복 방지).
+
+---
+
 ### Step 1-4: RAG 없음 — 자동 수집 흐름 실행 ⭐
 
 조회한 주제의 manifest가 없거나 소스가 손상된 경우,
@@ -440,6 +560,16 @@ print(','.join(dirs))
 
 > **"어떤 내용이 궁금하신가요?"**
 > 예: `DRIVE Hyperion 10의 센서 구성은?`, `Mamba의 Selection Mechanism이란?`
+
+이전 학습 기록이 있었다면 (`PREV_NOTES_FOUND=true`), 다음과 같이 구체적인 제안을 추가합니다:
+
+```
+💡 이전에 배운 내용을 바탕으로 이어서 배울 수 있는 주제 예시:
+  - [이전 세션에서 언급됐지만 깊이 다루지 않은 개념들]
+  - [이전 학습 키워드와 연관된 심화 질문]
+```
+
+이 제안은 Step 1-3b에서 읽은 이전 학습 기록을 분석하여 Claude가 직접 생성합니다.
 
 ---
 
@@ -856,6 +986,18 @@ USER: 자율주행/NVIDIA__________
 AI: manifest 로드 완료.
     📂 카테고리: 자율주행 / 토픽: NVIDIA__________
     📄 파일: 6개 (142 KB)
+
+    📖 이전 학습 기록을 불러왔습니다.
+    [마지막 세션: 2026-02-19]
+    - NVIDIA DRIVE 플랫폼 개요 학습
+    - DRIVE AGX Orin 아키텍처 파악
+    - Hyperion 9 센서 구성 확인
+
+    이어서 학습을 진행합니다.
+    💡 이어서 배울 수 있는 주제 예시:
+      - DRIVE Hyperion 10의 센서 구성 (Hyperion 9 대비 변경점)
+      - DriveOS와 DRIVEWORKS SDK의 차이
+      - NVIDIA의 엔드투엔드 자율주행 파이프라인
 
     어떤 내용이 궁금하신가요?
 
