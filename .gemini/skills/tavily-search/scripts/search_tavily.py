@@ -144,9 +144,21 @@ def fetch_pdf_pdfplumber(url: str, timeout: int = 30) -> Optional[str]:
 
 
 def is_pdf_url(url: str) -> bool:
-    """URL이 PDF를 가리키는지 간단히 판단"""
+    """URL이 PDF를 가리키는지 판단.
+    확장자 .pdf 외에 확장자 없이 PDF를 서빙하는 학술 사이트 패턴도 포함.
+    """
     url_lower = url.lower().split("?")[0]  # 쿼리스트링 제거 후 판단
-    return url_lower.endswith(".pdf")
+    if url_lower.endswith(".pdf"):
+        return True
+    # 확장자 없이 PDF를 서빙하는 알려진 패턴
+    _PDF_PATH_PATTERNS = [
+        "arxiv.org/pdf/",           # https://arxiv.org/pdf/2602.00398
+        "openreview.net/pdf",       # https://openreview.net/pdf?id=...
+        "dl.acm.org/doi/pdf/",      # https://dl.acm.org/doi/pdf/10.xxxx
+        "semanticscholar.org/reader/", # Semantic Scholar PDF reader
+        "aclanthology.org/",        # ACL Anthology (대부분 PDF 직링크)
+    ]
+    return any(pat in url_lower for pat in _PDF_PATH_PATTERNS)
 
 
 def fetch_content(url: str, use_jina: bool, timeout: int, min_length: int) -> Tuple[Optional[str], str]:
@@ -183,6 +195,29 @@ def fetch_content(url: str, use_jina: bool, timeout: int, min_length: int) -> Tu
         return None, "tavily_snippet"
 
     elif use_jina:
+        # arxiv abs URL → HTML/PDF 자동 승격 (abstract 페이지만 수집되는 문제 방지)
+        if "arxiv.org/abs/" in url.lower():
+            arxiv_id = url.lower().split("arxiv.org/abs/")[-1].split("?")[0].rstrip("/")
+
+            # 1순위: HTML 버전 (구조화된 본문, 수식·표도 텍스트로 변환됨)
+            html_url = f"https://arxiv.org/html/{arxiv_id}"
+            print(f"    [arXiv] abs URL 감지 → HTML 시도: {html_url[:60]}...")
+            content = fetch_jina(html_url, timeout=timeout)
+            if content and not is_noise(content, min_length):
+                print(f"    [arXiv] HTML OK ({len(content):,}자)")
+                return content, "arxiv_html"
+
+            # 2순위: PDF 버전
+            pdf_url = f"https://arxiv.org/pdf/{arxiv_id}"
+            print(f"    [arXiv] HTML 실패 → PDF 시도: {pdf_url[:60]}...")
+            content = fetch_pdf_jina(pdf_url, timeout=timeout + 5)
+            if content and not is_noise(content, min_length):
+                print(f"    [arXiv] PDF OK ({len(content):,}자)")
+                return content, "arxiv_pdf"
+
+            print(f"    [arXiv] HTML/PDF 모두 실패 → abs 페이지 Jina fallback")
+            # abs 페이지 자체로 아래 일반 Jina 수집 계속
+
         # 일반 URL: Jina 수집
         content = fetch_jina(url, timeout=timeout)
         if content is None:
@@ -446,10 +481,18 @@ def search_and_save(
 
         path = create_source_file(output_path, query, result, idx, full_content, source_tag)
         created.append(path)
+        file_size = Path(path).stat().st_size
         print(f"  [saved {idx}] ({source_tag}) {Path(path).name}")
+        # 저품질 파일 경고: Jina 수집 실패로 snippet만 저장된 경우
+        if source_tag == "tavily_snippet" and file_size < 3000:
+            print(f"  ⚠️  [저품질] snippet만 저장됨 ({file_size}B) — Jina 수집 실패. 수동 확인 권장")
 
     duplicate_info = f", {duplicate_count}개 중복 제외" if duplicate_count > 0 else ""
     print(f"\n  {len(created)}개 저장{duplicate_info}, {skipped}개 필터됨 → {output_path}")
+    # 저품질 파일 종합 경고
+    low_quality = [p for p in created if Path(p).stat().st_size < 3000]
+    if low_quality:
+        print(f"  ⚠️  저품질 파일 {len(low_quality)}개: {[Path(p).name for p in low_quality]}")
     return created
 
 
@@ -471,7 +514,7 @@ def main() -> int:
     parser.add_argument("--exclude-domains",      help="제외 도메인 (쉼표 구분). 예: reddit.com,youtube.com")
     parser.add_argument("--use-jina",             action="store_true", help="Jina Reader로 전체 페이지 수집")
     parser.add_argument("--min-content-length",   type=int, default=200, help="최소 콘텐츠 길이 (기본 200자)")
-    parser.add_argument("--jina-timeout",         type=int, default=15,  help="Jina 요청 타임아웃(초)")
+    parser.add_argument("--jina-timeout",         type=int, default=25,  help="Jina 요청 타임아웃(초, 기본 25. JS-heavy 사이트는 더 늘림)")
 
     args = parser.parse_args()
 
