@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-KnowledgeEngine is a Claude Code-orchestrated AI learning agent. Claude Code itself acts as the orchestrator — it reads workflow `.md` files in `.agent/workflows/` and executes the steps, calling Python skill scripts as subprocesses. There is no separate Python orchestrator.
+KnowledgeEngine is a Claude Code-orchestrated AI learning agent. Claude Code itself acts as the orchestrator — it reads workflow `.md` files in `.gemini/workflows/` and executes the steps, calling Python skill scripts as subprocesses. There is no separate Python orchestrator.
 
 ## Setup
 
@@ -26,10 +26,11 @@ Optional:
 
 | Command | Workflow file | Purpose |
 |---------|--------------|---------|
-| `/knowledge_tutor` | `.agent/workflows/knowledge_tutor.md` | Web search → Socratic tutoring → Obsidian save |
-| `/knowledge_query` | `.agent/workflows/knowledge_query.md` | RAG Q&A over previously collected sources (no new web search) |
+| `/knowledge_tutor` | `.gemini/workflows/knowledge_tutor.md` | Web search → Socratic tutoring → Obsidian save |
+| `/knowledge_query` | `.gemini/workflows/knowledge_query.md` | RAG Q&A over previously collected sources (no new web search) |
+| `/knowledge_dashboard` | `.gemini/workflows/knowledge_dashboard.md` | Show collected topics overview |
 
-**Note:** The workflow `.md` files contain PowerShell syntax (written for Windows). On Linux, translate PowerShell commands to bash equivalents when executing — e.g., `$env:VAR` → `$VAR`, backslashes → forward slashes, `Get-ChildItem` → `ls`, `Remove-Item -Recurse -Force` → `rm -rf`.
+**Note:** `.claude/commands/` files are symlinks to `.gemini/workflows/` — edit only `.gemini/workflows/` files. Workflow files contain both bash (Linux/macOS) and PowerShell (Windows) tab sections.
 
 ## Skills (Python scripts)
 
@@ -37,9 +38,9 @@ All skills are called from the project root. Scripts auto-load `.env` via `pytho
 
 ### tavily-search
 ```bash
-python .agent/skills/tavily-search/scripts/search_tavily.py \
+python .gemini/skills/tavily-search/scripts/search_tavily.py \
   --query "topic" \
-  --output-dir "$OBSIDIAN_VAULT_PATH/sources/topic_name" \
+  --output-dir "$OBSIDIAN_VAULT_PATH/Agent/{category}/sources/topic_name" \
   --use-jina \
   --exclude-domains "reddit.com,youtube.com,amazon.com" \
   --max-results 5
@@ -49,31 +50,33 @@ Outputs: `{output-dir}/{query}_summary_{date}.md` + one `.md` per source.
 ### rag-retriever
 ```bash
 # Create manifest (after tavily-search)
-python .agent/skills/rag-retriever/scripts/create_manifest.py \
+python .gemini/skills/rag-retriever/scripts/create_manifest.py \
   --topic "topic" \
-  --sources-dir "$OBSIDIAN_VAULT_PATH/sources/topic_name" \
-  --rag-root "$OBSIDIAN_VAULT_PATH/rag"
+  --sources-dir "$OBSIDIAN_VAULT_PATH/Agent/{category}/sources/topic_name" \
+  --rag-root "$OBSIDIAN_VAULT_PATH/Agent/{category}/rag"
 
 # BM25 chunk retrieval
-python .agent/skills/rag-retriever/scripts/retrieve_chunks.py \
+python .gemini/skills/rag-retriever/scripts/retrieve_chunks.py \
   --query "user question" \
-  --sources-dir "$OBSIDIAN_VAULT_PATH/sources/topic_name" \
+  --sources-dir "$OBSIDIAN_VAULT_PATH/Agent/{category}/sources/topic_name" \
   --top-k 5 \
-  --chunk-size 800 \
+  --chunk-size 1200 \
   --show-stats
 ```
-Manifests stored at: `{OBSIDIAN_VAULT_PATH}/rag/{safe_topic}/manifest.json`
+Manifests stored at: `{OBSIDIAN_VAULT_PATH}/Agent/{category}/rag/{safe_topic}/manifest.json`
 
 ### obsidian-integration
 ```bash
-python .agent/skills/obsidian-integration/scripts/save_to_obsidian.py \
+python .gemini/skills/obsidian-integration/scripts/save_to_obsidian.py \
   --topic "topic" \
   --content "## 💬 학습 기록\n..." \
   --summary "- key point 1\n- key point 2" \
   --category "AI_Study" \
-  --vault-path "$OBSIDIAN_VAULT_PATH"
+  --vault-path "$OBSIDIAN_VAULT_PATH/Agent"
 ```
-Outputs: `{vault-path}/{YYYY-MM-DD}_{topic}.md`
+Outputs:
+- 세션 노트: `{vault-path}/{category}/{YYYY-MM-DD}_{topic}.md`
+- 종합 누적 노트(`--append`): `{vault-path}/{topic}.md`
 
 ## Architecture
 

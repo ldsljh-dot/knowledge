@@ -164,7 +164,9 @@ def save_note(
 
     date_str   = datetime.now().strftime("%Y-%m-%d")
     safe_topic = safe_filename(topic)
-    filepath   = unique_path(vault / f"{date_str}_{safe_topic}.md")
+    category_dir = vault / category
+    category_dir.mkdir(parents=True, exist_ok=True)
+    filepath   = unique_path(category_dir / f"{date_str}_{safe_topic}.md")
 
     note_text = build_note(
         topic=topic,
@@ -273,6 +275,7 @@ def append_session(
     safe_topic = safe_filename(topic)
     now_str    = datetime.now().strftime("%Y-%m-%d %H:%M")
 
+    # 종합파일은 vault 루트(Agent/)에 저장 — 카테고리 서브폴더 없음
     existing = find_existing_note(vault, safe_topic)
 
     if existing:

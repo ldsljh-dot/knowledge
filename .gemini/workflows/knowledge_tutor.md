@@ -380,7 +380,7 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
   --query "{TOPIC} 핵심 개념 아키텍처 특징" \
   --sources-dir "$OUTPUT_DIR" \
   --top-k 7 \
-  --chunk-size 800 \
+  --chunk-size 1200 \
   --show-stats
 ```
 
@@ -394,7 +394,7 @@ python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py"
   --query "{TOPIC} 핵심 개념 아키텍처 특징" `
   --sources-dir "$OUTPUT_DIR" `
   --top-k 7 `
-  --chunk-size 800 `
+  --chunk-size 1200 `
   --show-stats
 ```
 
@@ -413,7 +413,7 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
   --query "{USER_QUESTION}" \
   --sources-dir "$OUTPUT_DIR" \
   --top-k 5 \
-  --chunk-size 800
+  --chunk-size 1200
 ```
 
 </tab>
@@ -426,7 +426,7 @@ python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py"
   --query "{USER_QUESTION}" `
   --sources-dir "$OUTPUT_DIR" `
   --top-k 5 `
-  --chunk-size 800
+  --chunk-size 1200
 ```
 
 </tab>
@@ -436,7 +436,39 @@ python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py"
 
 ---
 
-### Step 2-3: Interactive Tutoring 루프
+### Step 2-3: RAG 신뢰도 계산
+
+retrieve_chunks 출력에서 `score=X.XXX` 값들을 파싱하여 신뢰도를 계산합니다.
+
+**신뢰도 계산 공식:**
+
+```
+검색된 청크가 없으면: 신뢰도 = 0%
+
+max_score = 검색된 청크 중 가장 높은 BM25 score
+avg_score = 상위 3개 청크 점수의 평균 (청크가 적으면 전체 평균)
+
+score_grade:
+  max_score == 0         → 0%
+  0 < max_score < 0.5    → max_score / 0.5 * 25          (0~25%)
+  0.5 ≤ max_score < 2.0  → 25 + (max_score-0.5)/1.5 * 30 (25~55%)
+  2.0 ≤ max_score < 4.0  → 55 + (max_score-2.0)/2.0 * 25 (55~80%)
+  max_score ≥ 4.0        → min(95, 80 + (max_score-4.0)*5) (80~95%)
+
+신뢰도 = int(score_grade)
+```
+
+**신뢰도 배지:**
+| 신뢰도 | 배지 | 의미 |
+|--------|------|------|
+| 80~100% | 🟢 높음 | 자료에 충분한 근거 있음 |
+| 50~79%  | 🟡 보통 | 부분적 근거, 보완 가능 |
+| 20~49%  | 🟠 낮음 | 관련 자료 부족, 추가 검색 권장 |
+| 0~19%   | 🔴 매우 낮음 | 자료 없음, 반드시 추가 검색 필요 |
+
+---
+
+### Step 2-4: Interactive Tutoring 루프
 
 수집된 자료를 **내부 컨텍스트**로 활용하며 다음 규칙으로 튜터링합니다:
 
@@ -455,11 +487,105 @@ python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py"
 4. **학습 대화 기록**
    - 모든 Q&A를 내부적으로 기록 → Phase 3에서 노트에 포함
 
+5. **신뢰도 항상 표시**
+   - 모든 답변 하단에 📊 RAG 신뢰도 배지를 포함
+
+**답변 형식:**
+
+```
+{답변 내용}
+
+📄 출처: {파일명} (chunk #{n}, score={s:.3f})
+
+---
+📊 RAG 신뢰도: {배지} {신뢰도}%  ({검색된_청크_수}개 청크 참조, max_score={max_score:.3f})
+
+🤔 {이해도 확인 질문}
+```
+
+> ⚠️ 신뢰도가 🟠 낮음(20~49%) 또는 🔴 매우 낮음(0~19%)이면 다음 메시지를 강조:
+> **"⚡ 신뢰도가 낮습니다. '추가 검색해줘'라고 입력하면 웹에서 최신 자료를 수집합니다."**
+
 ---
 
-### Step 2-4: 실시간 추가 검색
+### Step 2-5: 추가 크롤링 요청 처리
 
-사용자 질문이 수집된 자료 범위를 벗어날 경우:
+사용자가 다음 키워드를 입력하면 추가 웹 크롤링을 실행합니다:
+- `추가 검색`, `더 찾아봐`, `크롤링해줘`, `웹 검색`, `자료 추가`, `검색 보강`, `search more`
+
+**추가 크롤링 흐름:**
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
+  --query "{현재_질문_또는_TOPIC}" \
+  --output-dir "$OUTPUT_DIR" \
+  --max-results 3 \
+  --search-depth advanced \
+  --use-jina \
+  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" \
+  --min-content-length 300
+
+python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
+  --topic "{TOPIC}" \
+  --sources-dir "$OUTPUT_DIR" \
+  --rag-root "$RAG_ROOT" \
+  --vault-path "$OBSIDIAN_VAULT_PATH" \
+  --category "{CATEGORY}"
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
+  --query "{현재_질문_또는_TOPIC}" `
+  --output-dir "$OUTPUT_DIR" `
+  --max-results 3 `
+  --search-depth advanced `
+  --use-jina `
+  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" `
+  --min-content-length 300
+
+python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
+  --topic "{TOPIC}" `
+  --sources-dir "$OUTPUT_DIR" `
+  --rag-root "$RAG_ROOT" `
+  --vault-path "$env:OBSIDIAN_VAULT_PATH" `
+  --category "{CATEGORY}"
+```
+
+</tab>
+</tabs>
+
+크롤링 완료 후:
+1. 동일 질문으로 RAG 재검색 (Step 2-4 재실행)
+2. 신뢰도 재계산 후 개선 여부 표시:
+   ```
+   🔄 자료 보강 완료: {추가된_파일_수}개 파일 추가됨
+   신뢰도 변화: {이전_신뢰도}% → {새_신뢰도}%
+   ```
+
+---
+
+### Step 2-6: 실시간 자동 추가 검색 (범위 초과 시)
+
+사용자 질문이 수집된 자료 범위를 벗어나거나 신뢰도가 자동으로 낮게 측정되면 (신뢰도 < 20%):
 
 <tabs>
 <tab label="Linux/macOS (Bash)">
@@ -525,7 +651,7 @@ python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py"
 
 ---
 
-### Step 2-5: 종료 감지
+### Step 2-7: 종료 감지
 
 사용자가 다음 중 하나를 입력하면 Phase 3으로 이동:
 - `종료`, `exit`, `quit`, `그만`, `끝`, `done`
