@@ -17,6 +17,16 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# common.utils 임포트를 위해 sys.path 설정
+_here = Path(__file__).resolve()
+_skills_dir = _here.parent.parent.parent
+if str(_skills_dir) not in sys.path:
+    sys.path.insert(0, str(_skills_dir))
+
+from common.utils import load_env
+
+# .env 자동 로드
+load_env()
 
 def load_manifests(agent_dir: Path) -> dict[str, list[dict]]:
     """agent_dir/{Category}/rag/{topic}/manifest.json 을 카테고리별로 수집"""

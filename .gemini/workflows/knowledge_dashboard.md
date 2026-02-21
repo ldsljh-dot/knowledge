@@ -53,6 +53,11 @@ python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboa
   --agent-dir "$AGENT_DIR" \
   --output "$DASHBOARD_FILE"
 
+if [ $? -ne 0 ]; then
+  echo "❌ 대시보드 생성 중 오류가 발생했습니다."
+  exit 1
+fi
+
 # 대시보드 출력
 if [ -f "$DASHBOARD_FILE" ]; then
     cat "$DASHBOARD_FILE"
@@ -72,6 +77,11 @@ $DASHBOARD_FILE = "$AGENT_DIR/_Dashboard.md"
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" `
   --agent-dir "$AGENT_DIR" `
   --output "$DASHBOARD_FILE"
+
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ 대시보드 생성 중 오류가 발생했습니다."
+  exit 1
+}
 
 # 대시보드 출력
 if (Test-Path "$DASHBOARD_FILE") {

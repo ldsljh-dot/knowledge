@@ -26,6 +26,11 @@ AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
 
 python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/list_topics.py" \
   --agent-dir "$AGENT_DIR"
+
+if [ $? -ne 0 ]; then
+  echo "❌ 토픽 목록을 가져오는 중 오류가 발생했습니다."
+  exit 1
+fi
 ```
 
 </tab>
@@ -46,6 +51,11 @@ $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
 
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/list_topics.py" `
   --agent-dir "$AGENT_DIR"
+
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ 토픽 목록을 가져오는 중 오류가 발생했습니다."
+  exit 1
+}
 ```
 
 </tab>
@@ -85,6 +95,11 @@ python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/delete_knowledge
   --vault-path "$OBSIDIAN_VAULT_PATH" \
   --targets "{선택한_식별자_목록}" \
   --preview
+
+if [ $? -ne 0 ]; then
+  echo "❌ 삭제 대상을 확인하는 중 오류가 발생했습니다."
+  exit 1
+fi
 ```
 
 </tab>
@@ -98,7 +113,13 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/delete_knowl
   --vault-path "$env:OBSIDIAN_VAULT_PATH" `
   --targets "{선택한_식별자_목록}" `
   --preview
+
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ 삭제 대상을 확인하는 중 오류가 발생했습니다."
+  exit 1
+}
 ```
+
 
 </tab>
 </tabs>
@@ -127,6 +148,11 @@ python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/delete_knowledge
   --vault-path "$OBSIDIAN_VAULT_PATH" \
   --targets "{선택한_식별자_목록}" \
   --delete
+
+if [ $? -ne 0 ]; then
+  echo "❌ 삭제 작업 중 오류가 발생했습니다."
+  exit 1
+fi
 ```
 
 </tab>
@@ -138,6 +164,11 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/delete_knowl
   --vault-path "$env:OBSIDIAN_VAULT_PATH" `
   --targets "{선택한_식별자_목록}" `
   --delete
+
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ 삭제 작업 중 오류가 발생했습니다."
+  exit 1
+}
 ```
 
 </tab>
@@ -164,6 +195,11 @@ python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/delete_knowledge
   --targets "{선택한_식별자_목록}" \
   --find-notes \
   --preview
+
+if [ $? -ne 0 ]; then
+  echo "❌ 관련 노트를 검색하는 중 오류가 발생했습니다."
+  exit 1
+fi
 ```
 
 </tab>
@@ -176,6 +212,11 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/delete_knowl
   --targets "{선택한_식별자_목록}" `
   --find-notes `
   --preview
+
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ 관련 노트를 검색하는 중 오류가 발생했습니다."
+  exit 1
+}
 ```
 
 </tab>
@@ -194,6 +235,11 @@ python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/delete_knowledge
   --vault-path "$OBSIDIAN_VAULT_PATH" \
   --targets "{선택한_식별자_목록}" \
   --delete-notes
+
+if [ $? -ne 0 ]; then
+  echo "❌ 노트를 삭제하는 중 오류가 발생했습니다."
+  exit 1
+fi
 ```
 
 </tab>
@@ -205,6 +251,11 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/delete_knowl
   --vault-path "$env:OBSIDIAN_VAULT_PATH" `
   --targets "{선택한_식별자_목록}" `
   --delete-notes
+
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ 노트를 삭제하는 중 오류가 발생했습니다."
+  exit 1
+}
 ```
 
 </tab>

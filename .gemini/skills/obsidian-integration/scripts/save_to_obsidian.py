@@ -31,25 +31,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-# .env 지원
-try:
-    from dotenv import load_dotenv
-    _here = Path(__file__).resolve()
-    for _parent in [_here.parent, _here.parent.parent.parent.parent]:
-        _env = _parent / ".env"
-        if _env.exists():
-            load_dotenv(_env)
-            break
-except ImportError:
-    pass
+# common.utils 임포트를 위해 sys.path 설정
+_here = Path(__file__).resolve()
+_skills_dir = _here.parent.parent.parent
+if str(_skills_dir) not in sys.path:
+    sys.path.insert(0, str(_skills_dir))
+
+from common.utils import load_env, safe_filename
+
+# .env 자동 로드
+load_env()
 
 
 # ────────────────────────── 유틸 ──────────────────────────
-
-def safe_filename(text: str) -> str:
-    """특수문자 → 언더바 (Obsidian 안전 파일명)"""
-    return "".join(c if (c.isalnum() or c in " -") else "_" for c in text).strip()
-
 
 def extract_title(filepath: str) -> str:
     """md 파일에서 frontmatter title 또는 첫 번째 H1 추출"""

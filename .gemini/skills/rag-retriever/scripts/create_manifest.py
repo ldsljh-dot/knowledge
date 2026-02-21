@@ -24,16 +24,16 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+# common.utils 임포트를 위해 sys.path 설정
+_here = Path(__file__).resolve()
+_skills_dir = _here.parent.parent.parent
+if str(_skills_dir) not in sys.path:
+    sys.path.insert(0, str(_skills_dir))
 
+from common.utils import load_env, safe_filename
 
-def safe_filename(text: str) -> str:
-    """공백/특수문자를 밑줄로 변환"""
-    return "".join(c if c.isalnum() or c in "-_" else "_" for c in text).strip("_")
+# .env 자동 로드
+load_env()
 
 
 def to_relative(path: Path, vault_path: Path) -> str:

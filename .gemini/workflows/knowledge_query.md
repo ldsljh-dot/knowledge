@@ -30,6 +30,12 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 echo "AGENT_ROOT: $AGENT_ROOT"
 echo "TAVILY_API_KEY: ${TAVILY_API_KEY:0:8}..."
 echo "OBSIDIAN_VAULT_PATH: $OBSIDIAN_VAULT_PATH"
+
+# 의존성 패키지 확인
+if ! python -c "import tavily, rank_bm25" &> /dev/null; then
+  echo "⚠️ 필수 패키지가 설치되지 않았습니다. 설치를 진행합니다..."
+  pip install -r "$AGENT_ROOT/requirements.txt"
+fi
 ```
 
 </tab>
@@ -52,6 +58,14 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 Write-Host "AGENT_ROOT: $env:AGENT_ROOT"
 if ($env:TAVILY_API_KEY) { Write-Host "TAVILY_API_KEY: $($env:TAVILY_API_KEY.Substring(0,8))..." }
 Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
+
+# 의존성 패키지 확인
+try {
+    python -c "import tavily, rank_bm25" *>$null
+} catch {
+    Write-Host "⚠️ 필수 패키지가 설치되지 않았습니다. 설치를 진행합니다..."
+    pip install -r "$env:AGENT_ROOT\requirements.txt"
+}
 ```
 
 </tab>
@@ -437,6 +451,11 @@ python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --use-jina \
   --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" \
   --min-content-length 300
+
+if [ $? -ne 0 ]; then
+  echo "❌ 검색 중 오류가 발생했습니다."
+  exit 1
+fi
 ```
 
 </tab>
@@ -466,6 +485,11 @@ python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
   --use-jina `
   --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" `
   --min-content-length 300
+
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ 검색 중 오류가 발생했습니다."
+  exit 1
+}
 ```
 
 </tab>
@@ -491,6 +515,11 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --output-dir "$RAG_DIR" \
   --vault-path "$OBSIDIAN_VAULT_PATH" \
   --category "{CATEGORY}"
+
+if [ $? -ne 0 ]; then
+  echo "❌ Manifest 생성 중 오류가 발생했습니다."
+  exit 1
+fi
 ```
 
 </tab>
@@ -509,6 +538,11 @@ python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py"
   --output-dir "$RAG_DIR" `
   --vault-path "$env:OBSIDIAN_VAULT_PATH" `
   --category "{CATEGORY}"
+
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ Manifest 생성 중 오류가 발생했습니다."
+  exit 1
+}
 ```
 
 </tab>
@@ -592,6 +626,11 @@ for dir in "${DIRS[@]}"; do
       --top-k 5 \
       --chunk-size 1200 \
       --show-stats
+      
+    if [ $? -ne 0 ]; then
+      echo "❌ RAG 검색 중 오류가 발생했습니다."
+      exit 1
+    fi
 done
 ```
 
@@ -612,6 +651,11 @@ foreach ($dir in $DIRS) {
       --top-k 5 `
       --chunk-size 1200 `
       --show-stats
+      
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host "❌ RAG 검색 중 오류가 발생했습니다."
+      exit 1
+    }
 }
 ```
 
@@ -734,6 +778,11 @@ python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --output-dir "$RAG_DIR" \
   --vault-path "$OBSIDIAN_VAULT_PATH" \
   --category "{CATEGORY}"
+
+if [ $? -ne 0 ]; then
+  echo "❌ 추가 크롤링 중 오류가 발생했습니다."
+  exit 1
+fi
 ```
 
 </tab>
@@ -771,6 +820,11 @@ python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py"
   --output-dir "$RAG_DIR" `
   --vault-path "$env:OBSIDIAN_VAULT_PATH" `
   --category "{CATEGORY}"
+
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ 추가 크롤링 중 오류가 발생했습니다."
+  exit 1
+}
 ```
 
 </tab>
@@ -829,6 +883,11 @@ for dir in "${DIRS[@]}"; do
       --sources-dir "$dir" \
       --top-k 3 \
       --chunk-size 800
+      
+    if [ $? -ne 0 ]; then
+      echo "❌ RAG 검색 중 오류가 발생했습니다."
+      exit 1
+    fi
 done
 ```
 
@@ -881,6 +940,11 @@ foreach ($dir in $DIRS) {
       --sources-dir "$dir" `
       --top-k 3 `
       --chunk-size 800
+      
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host "❌ RAG 검색 중 오류가 발생했습니다."
+      exit 1
+    }
 }
 ```
 
@@ -924,6 +988,11 @@ python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian
 python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" \
   --agent-dir "$AGENT_DIR" \
   --output "$AGENT_DIR/_Dashboard.md"
+
+if [ $? -ne 0 ]; then
+  echo "❌ 세션 저장 또는 대시보드 업데이트 중 오류가 발생했습니다."
+  exit 1
+fi
 ```
 
 </tab>
@@ -956,6 +1025,11 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" `
   --agent-dir "$AGENT_DIR" `
   --output "$AGENT_DIR/_Dashboard.md"
+
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ 세션 저장 또는 대시보드 업데이트 중 오류가 발생했습니다."
+  exit 1
+}
 ```
 
 </tab>

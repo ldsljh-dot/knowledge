@@ -23,17 +23,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 
-# .env 지원 (python-dotenv가 있으면 자동 로드)
-try:
-    from dotenv import load_dotenv
-    _here = Path(__file__).resolve()
-    for _parent in [_here.parent, _here.parent.parent.parent.parent]:
-        _env = _parent / ".env"
-        if _env.exists():
-            load_dotenv(_env)
-            break
-except ImportError:
-    pass
+# common.utils 임포트를 위해 sys.path 설정
+_here = Path(__file__).resolve()
+_skills_dir = _here.parent.parent.parent
+if str(_skills_dir) not in sys.path:
+    sys.path.insert(0, str(_skills_dir))
+
+from common.utils import load_env, safe_filename
+
+# .env 자동 로드
+load_env()
 
 
 # ────────────────────────── 유틸 ──────────────────────────
@@ -79,11 +78,6 @@ def load_existing_urls(output_dir: Path) -> set:
         except Exception:
             pass
     return urls
-
-
-def safe_filename(text: str) -> str:
-    """텍스트를 안전한 파일명으로 변환 (영숫자 + 언더바)"""
-    return "".join([c if c.isalnum() else "_" for c in text])
 
 
 def fetch_jina(url: str, timeout: int = 20) -> Optional[str]:
