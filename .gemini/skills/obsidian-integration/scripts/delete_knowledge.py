@@ -5,6 +5,17 @@ import pathlib
 import shutil
 import sys
 
+# common.utils 임포트를 위해 sys.path 설정
+_here = pathlib.Path(__file__).resolve()
+_skills_dir = _here.parent.parent.parent
+if str(_skills_dir) not in sys.path:
+    sys.path.insert(0, str(_skills_dir))
+
+from common.utils import load_env
+
+# .env 자동 로드
+load_env()
+
 def main():
     parser = argparse.ArgumentParser(description="Delete knowledge topics")
     parser.add_argument("--agent-dir", required=True, help="Path to Agent directory")
