@@ -157,7 +157,7 @@ def save_note(
     vault.mkdir(parents=True, exist_ok=True)
 
     date_str   = datetime.now().strftime("%Y-%m-%d")
-    safe_topic = safe_filename(topic)
+    safe_topic = safe_filename(topic, max_length=60)
     category_dir = vault / category
     category_dir.mkdir(parents=True, exist_ok=True)
     filepath   = unique_path(category_dir / f"{date_str}_{safe_topic}.md")
@@ -266,7 +266,7 @@ def append_session(
     vault = Path(vault_path)
     vault.mkdir(parents=True, exist_ok=True)
 
-    safe_topic = safe_filename(topic)
+    safe_topic = safe_filename(topic, max_length=60)
     now_str    = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     # 종합파일은 vault 루트(Agent/)에 저장 — 카테고리 서브폴더 없음

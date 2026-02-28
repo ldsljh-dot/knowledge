@@ -25,8 +25,14 @@ def load_env() -> bool:
         pass
     return False
 
-def safe_filename(text: str) -> str:
+def safe_filename(text: str, max_length: int = 100) -> str:
     """
     Convert text to a safe filename (alphanumeric + underscores/dashes).
+    Truncates to max_length.
     """
-    return "".join([c if c.isalnum() or c in "-_" else "_" for c in text]).strip("_")
+    safe = "".join([c if c.isalnum() or c in "-_" else "_" for c in text]).strip("_")
+    # 연속된 언더바 하나로 축소
+    safe = re.sub(r"__+", "_", safe)
+    if len(safe) > max_length:
+        safe = safe[:max_length].rstrip("_")
+    return safe

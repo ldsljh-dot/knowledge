@@ -324,15 +324,12 @@ def create_source_file(
     timestamp = datetime.now().strftime("%Y-%m-%d")
     
     title = source.get("title", "Untitled")
-    safe_name = safe_filename(title)
+    # 파일명 길이 제한 (Windows 호환성 등)
+    safe_name = safe_filename(title, max_length=60)
     
     # 제목이 없거나 특수문자로만 되어있으면 쿼리를 대신 사용
     if not safe_name.strip("_"):
-        safe_name = safe_filename(query)
-        
-    # 파일명 길이 제한 (Windows 호환성 등)
-    if len(safe_name) > 150:
-        safe_name = safe_name[:150]
+        safe_name = safe_filename(query, max_length=60)
 
     filename = f"{safe_name}_{index}_{timestamp}.md"
     filepath = output_dir / filename
@@ -389,7 +386,7 @@ tags: [web_research, auto_generated, {source_tag}]
 def create_summary_file(output_dir: Path, query: str, answer: str) -> str:
     """Tavily AI 요약을 별도 파일로 저장"""
     timestamp = datetime.now().strftime("%Y-%m-%d")
-    safe_query = safe_filename(query)
+    safe_query = safe_filename(query, max_length=60)
     filename = f"{safe_query}_summary_{timestamp}.md"
     filepath = output_dir / filename
 

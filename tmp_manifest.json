@@ -1,0 +1,31 @@
+{
+  "topic": "MemoryLLM Research",
+  "safe_topic": "MemoryLLM_Research",
+  "category": "AI_Study",
+  "vault_path": "/home/jh/Obsidian Vault/Obsidian",
+  "source_dirs": [
+    "Agent/AI_Study/sources/MemoryLLM_Research"
+  ],
+  "files": [
+    {
+      "path": "Agent/sources/MemoryLLM_Research/MemoryLLM_Plug_n_Play_Feed_Forward_Memory_Transformers_FFN_decoupling_token_wise_retrieval_summary_2026-02-21.md",
+      "name": "MemoryLLM_Plug_n_Play_Feed_Forward_Memory_Transformers_FFN_decoupling_token_wise_retrieval_summary_2026-02-21.md",
+      "size_bytes": 620
+    },
+    {
+      "path": "Agent/sources/MemoryLLM_Research/Memory_based_Expert_Knowledge_Injection_for_Efficient_LLM_Scaling_3_2026-02-21.md",
+      "name": "Memory_based_Expert_Knowledge_Injection_for_Efficient_LLM_Scaling_3_2026-02-21.md",
+      "size_bytes": 68488
+    },
+    {
+      "path": "Agent/sources/MemoryLLM_Research/Plug_n_Play_Interpretable_Feed_Forward_Memory_for_Transformers_1_2026-02-21.md",
+      "name": "Plug_n_Play_Interpretable_Feed_Forward_Memory_for_Transformers_1_2026-02-21.md",
+      "size_bytes": 58339
+    }
+  ],
+  "file_count": 3,
+  "total_bytes": 127447,
+  "tags": [],
+  "created": "2026-02-21T09:03:09",
+  "updated": "2026-02-21T09:06:18"
+}

@@ -44,6 +44,7 @@ The project follows a **Workflow + Skill** architecture where the LLM agent acts
 ### Core Workflows (`.gemini/workflows/`)
 - **`knowledge_tutor.md`**: The primary entry point. Orchestrates the full search-learn-save lifecycle.
 - **`knowledge_query.md`**: Allows querying previously collected knowledge using RAG without re-searching the web.
+- **`myseminar.md`**: Real-time seminar Q&A capture. Classifies inputs (Question/Opinion/Answer/Key Point), enriches with RAG context, and saves to Obsidian. Generates unanswered question list at session end.
 
 ### Skills (`.gemini/skills/`)
 Skills are standalone Python scripts that perform specific tasks:
@@ -69,6 +70,7 @@ Skills are standalone Python scripts that perform specific tasks:
 | Task | Command |
 |------|---------|
 | **Full Tutor Workflow** | `/knowledge_tutor` |
+| **Move Topic** | `/knowledge_mv` |
 | **Search Only** | `python .gemini/skills/tavily-search/scripts/search_tavily.py --query "Topic" --output-dir "path"` |
 | **Create RAG Index** | `python .gemini/skills/rag-retriever/scripts/create_manifest.py --topic "Topic" --sources-dir "path"` |
 | **Retrieve Chunks** | `python .gemini/skills/rag-retriever/scripts/retrieve_chunks.py --query "Question" --sources-dir "path"` |
