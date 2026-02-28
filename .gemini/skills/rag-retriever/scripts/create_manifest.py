@@ -90,7 +90,7 @@ def main() -> int:
         return 1
     vault_path = Path(vault_str)
 
-    safe_topic = safe_filename(args.topic)
+    safe_topic = safe_filename(args.topic, max_length=60)
     
     if args.output_dir:
         rag_dir = Path(args.output_dir)

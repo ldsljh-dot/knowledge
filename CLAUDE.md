@@ -29,6 +29,7 @@ Optional:
 | `/knowledge_tutor` | `.gemini/workflows/knowledge_tutor.md` | Web search → Socratic tutoring → Obsidian save |
 | `/knowledge_query` | `.gemini/workflows/knowledge_query.md` | RAG Q&A over previously collected sources (no new web search) |
 | `/knowledge_dashboard` | `.gemini/workflows/knowledge_dashboard.md` | Show collected topics overview |
+| `/myseminar` | `.gemini/workflows/myseminar.md` | Real-time seminar Q&A capture → RAG enrichment → Obsidian save |
 
 **Note:** `.claude/commands/` files are symlinks to `.gemini/workflows/` — edit only `.gemini/workflows/` files. Workflow files contain both bash (Linux/macOS) and PowerShell (Windows) tab sections.
 
