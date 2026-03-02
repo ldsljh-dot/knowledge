@@ -22,7 +22,7 @@ trigger: /knowledge_rm
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
 python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/list_topics.py" \
   --agent-dir "$AGENT_DIR"
@@ -47,7 +47,7 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/list_topics.py" `
   --agent-dir "$AGENT_DIR"
@@ -269,8 +269,8 @@ if ($LASTEXITCODE -ne 0) {
 ✅ 삭제 완료!
 
 🗑  삭제된 항목:
-  - Agent/{Category}/{Topic}/sources/
-  - Agent/{Category}/{Topic}/rag/
+  - {Category}/{Topic}/sources/
+  - {Category}/{Topic}/rag/
 
 💡 같은 주제를 다시 수집하려면:
    /knowledge_tutor → '{topic}' 입력

@@ -22,7 +22,7 @@ trigger: /knowledge_mv
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
 # 토픽 목록 출력
 python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/list_topics.py" 
@@ -48,7 +48,7 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 
 # 토픽 목록 출력
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/list_topics.py" `
@@ -65,22 +65,20 @@ if ($LASTEXITCODE -ne 0) {
 
 ---
 
-### Step 1-2: 이동 설정 입력
+### Step 1-2: 이동 설정 입력 (대화형)
 
-사용자에게 다음 정보를 입력받습니다:
+사용자에게 위 목록을 참고하여 다음 정보를 텍스트로 입력받으세요.
 
-1. **"이동할 대상 토픽은 무엇입니까?"**
-   예: `AI_Study/Transformer_Architecture` (위 목록의 `Category/Topic` 형식)
+1. **"이동할 대상 토픽의 식별자(Category/Topic)를 위 목록에서 복사하여 붙여넣어 주세요."**
+   예: `0-Inbox/Transformer_Architecture`
    변수: `{SOURCE_TOPIC}`
 
-2. **"새로운 카테고리는 무엇입니까?"**
-   (변경하지 않으려면 엔터)
-   예: `DeepLearning_Basics`
+2. **"새로운 대상 카테고리(PARA 구조)를 입력하세요."**
+   (예: `1-Projects`, `2-Areas/AI_Study`, 변경하지 않으려면 엔터)
    변수: `{NEW_CATEGORY}`
 
 3. **"새로운 토픽 이름은 무엇입니까?"**
    (변경하지 않으려면 엔터)
-   예: `Transformer_Models`
    변수: `{NEW_TOPIC_NAME}`
 
 ---
@@ -169,7 +167,7 @@ if ($LASTEXITCODE -ne 0) {
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
 python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" \
   --agent-dir "$AGENT_DIR" \
@@ -187,7 +185,7 @@ fi
 ```powershell
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" `
   --agent-dir "$AGENT_DIR" `
@@ -213,5 +211,5 @@ if ($LASTEXITCODE -ne 0) {
   - 소스 파일 이동 완료
   - RAG Manifest 업데이트 완료
   - Obsidian 노트 이동 및 헤더 업데이트 완료
-  - 대시보드 업데이트 완료 (Agent/_Dashboard.md)
+  - 대시보드 업데이트 완료 (_Dashboard.md)
 ```

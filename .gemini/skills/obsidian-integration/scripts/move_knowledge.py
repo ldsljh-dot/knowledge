@@ -67,12 +67,12 @@ def update_manifest(rag_dir: Path, old_cat: str, old_topic: str,
         return
 
     # Helper to replace path prefixes
-    # Paths in manifest are relative to vault_path (e.g., Agent/OldCat/OldTopic/sources)
+    # Paths in manifest are relative to vault_path (e.g., OldCat/OldTopic/sources)
     old_safe_topic = safe_filename(old_topic, max_length=60)
     new_safe_topic = safe_filename(new_topic, max_length=60)
     
-    old_rel_base = f"Agent/{old_cat}/{old_safe_topic}"
-    new_rel_base = f"Agent/{new_cat}/{new_safe_topic}"
+    old_rel_base = f"{old_cat}/{old_safe_topic}"
+    new_rel_base = f"{new_cat}/{new_safe_topic}"
     
     # Update Metadata
     data['topic'] = new_topic
@@ -139,11 +139,11 @@ def main():
         print(f"❌ Vault path not found: {vault_path}", file=sys.stderr)
         return 1
         
-    agent_dir = Path(args.agent_dir) if args.agent_dir else vault_path / "Agent"
+    agent_dir = Path(args.agent_dir) if args.agent_dir else vault_path
     
     # Parse Source
     try:
-        src_cat, src_topic = args.source.split("/", 1)
+        src_cat, src_topic = args.source.rsplit("/", 1)
     except ValueError:
         print("❌ Source must be in 'Category/Topic' format", file=sys.stderr)
         return 1

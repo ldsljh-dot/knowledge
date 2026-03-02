@@ -1,11 +1,11 @@
 ---
-description: [Robust] 세미나/메모를 입력받아 표준 RAG(Agent/{Category})를 구축하고 내용을 누적 저장하는 무한 루프 워크플로우
+description: [Robust] 세미나/메모를 입력받아 표준 RAG({Category})를 구축하고 내용을 누적 저장하는 무한 루프 워크플로우
 trigger: /seminar
 ---
 
 # 🎙️ Seminar & Knowledge Capture Workflow (Robust)
 
-이 워크플로우는 사용자의 메모를 입력받아 **표준 지식 베이스 구조**(`Agent/{Category}/{Topic}`)에 안전하게 저장합니다. 지식이 없으면 자동으로 수집하고, 있으면 즉시 활용합니다.
+이 워크플로우는 사용자의 메모를 입력받아 **표준 지식 베이스 구조**(`{Category}/{Topic}`)에 안전하게 저장합니다. 지식이 없으면 자동으로 수집하고, 있으면 즉시 활용합니다.
 
 ---
 
@@ -29,31 +29,14 @@ python3 -c "import tavily, rank_bm25" 2>/dev/null || { echo "📦 Installing dep
 </tab>
 </tabs>
 
-### Step 1-1: 기존 카테고리 확인
-
-사용자가 정확한 카테고리를 선택할 수 있도록 현재 생성된 지식 베이스 목록을 보여줍니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
-```bash
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
-echo "📂 현재 사용 가능한 카테고리:"
-ls -F "$AGENT_DIR" | grep / | tr -d /
-```
-
-</tab>
-</tabs>
-
-### Step 1-2: 주제 및 카테고리 확정 (대화형)
+### Step 1-2: 주제 확정 (대화형)
 
 사용자에게 명시적으로 질문하여 변수를 확정합니다.
 
-1.  **"오늘 기록할 세미나나 메모의 주제(Topic)는 무엇인가요?"**
-2.  **"위 목록 중 어디에 저장할까요? (Category 입력)"**
-    *   (목록에 없으면 새로 생성됩니다.)
+**"오늘 기록할 세미나나 메모의 주제(Topic)는 무엇인가요?"**
 
-> **[중요]** 사용자가 카테고리를 입력하지 않으면 기본값 `General`을 사용합니다.
+사용자의 답변을 `{TOPIC}` 변수에 저장합니다.
+저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `0-Inbox`로 설정합니다.
 
 ---
 
@@ -76,7 +59,7 @@ CATEGORY="{CATEGORY}"
 SAFE_TOPIC=$(echo "$TOPIC" | tr ' /' '__')
 SAFE_CATEGORY=$(echo "$CATEGORY" | tr ' /' '__')
 
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 RAG_MANIFEST="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag/manifest.json"
 
 if [ -f "$RAG_MANIFEST" ]; then
@@ -171,7 +154,7 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
   --content "{합성된_내용}" \
   --summary "{한줄_요약}" \
   --category "$CATEGORY" \
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY" \
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
   --append
 ```
 
@@ -205,4 +188,4 @@ echo "📁 파일 위치: $AGENT_DIR/$SAFE_CATEGORY"
 ## Notes
 - **Robustness**: 파일 경로의 특수문자를 자동으로 처리(`SAFE_TOPIC`)하여 OS 오류를 방지합니다.
 - **Efficiency**: RAG 존재 여부를 먼저 확인하여 API 비용과 대기 시간을 최소화합니다.
-- **Standardization**: 모든 데이터는 프로젝트 표준(`Agent/Category/Topic`)을 따릅니다.
+- **Standardization**: 모든 데이터는 프로젝트 표준(`Category/Topic`)을 따릅니다.

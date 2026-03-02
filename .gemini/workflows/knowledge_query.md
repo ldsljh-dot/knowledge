@@ -139,7 +139,7 @@ if ($env:ANTHROPIC_API_KEY) {
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
 # 등록된 RAG manifest 목록 출력 — 카테고리별로 그룹화
 python3 -c "
@@ -192,7 +192,7 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 $AGENT_DIR_PY = $AGENT_DIR -replace '\\', '/'
 
 # 등록된 RAG manifest 목록 출력 — 카테고리별로 그룹화
@@ -273,7 +273,7 @@ SELECTION="{선택한_식별자}"
 if [ -f .env ]; then set -a; source .env; set +a; fi
 CATEGORY="${SELECTION%%/*}"
 SAFE_TOPIC="${SELECTION##*/}"
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 MANIFEST_PATH="$AGENT_DIR/$CATEGORY/$SAFE_TOPIC/rag/manifest.json"
 
 if [ -f "$MANIFEST_PATH" ]; then
@@ -311,7 +311,7 @@ if (Test-Path .env) {
 }
 $CATEGORY  = $SELECTION.Split('/')[0]
 $SAFE_TOPIC = $SELECTION.Split('/', 2)[1]
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 $MANIFEST_PATH = "$AGENT_DIR/$CATEGORY/$SAFE_TOPIC/rag/manifest.json"
 
 if (Test-Path $MANIFEST_PATH) {
@@ -354,7 +354,7 @@ manifest 로드 직후, 해당 카테고리 폴더에서 이전 학습 기록을
 
 ```bash
 # CATEGORY, SAFE_TOPIC, TOPIC은 Step 1-3에서 설정된 변수 사용
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
 python3 -c "
 import os, glob
@@ -399,7 +399,7 @@ else:
 
 ```powershell
 # CATEGORY, SAFE_TOPIC, TOPIC은 Step 1-3에서 설정된 변수 사용
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 $AGENT_DIR_PY = $AGENT_DIR -replace '\\', '/'
 
 python -c "
@@ -489,7 +489,7 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
 python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
@@ -523,7 +523,7 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 $OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
@@ -554,7 +554,7 @@ if ($LASTEXITCODE -ne 0) {
 ```bash
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 RAG_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
 
@@ -577,7 +577,7 @@ fi
 ```powershell
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 $OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 $RAG_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
 
@@ -808,7 +808,7 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 RAG_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
 
@@ -850,7 +850,7 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 $OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 $RAG_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
 
@@ -902,7 +902,7 @@ if ($LASTEXITCODE -ne 0) {
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
 ALL_DIRS=$(python3 -c "
 import json, os
@@ -955,7 +955,7 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 
 # Python을 사용하여 여러 manifest의 source_dirs를 합침
 # 경로 역슬래시 → 슬래시 변환 (Python 인라인 코드 안전성 확보)
@@ -1022,7 +1022,7 @@ if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
 # --append 플래그: 동일 주제 파일이 있으면 세션 블록 누적 추가, 없으면 새로 생성
 python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
@@ -1030,7 +1030,7 @@ python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian
   --content "{전체_Q&A_기록_QA_HISTORY}" \
   --summary "{핵심_포인트_SUMMARY}" \
   --category "Knowledge_Query" \
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY" \
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
   --append
 
 # 대시보드 업데이트
@@ -1059,7 +1059,7 @@ if (Test-Path .env) {
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 
 # --append 플래그: 동일 주제 파일이 있으면 세션 블록 누적 추가, 없으면 새로 생성
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
@@ -1067,7 +1067,7 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
   --content "{전체_Q&A_기록_QA_HISTORY}" `
   --summary "{핵심_포인트_SUMMARY}" `
   --category "Knowledge_Query" `
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY" `
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
   --append
 
 # 대시보드 업데이트
@@ -1200,8 +1200,8 @@ AI: 세션을 Obsidian에 저장하시겠습니까? (y/n)
 ## Notes
 
 - **전제 조건**: `knowledge_tutor`로 수집 + manifest 생성이 먼저 필요
-- **폴더 구조**: `Agent/{Category}/rag/{safe_topic}/manifest.json`
-- **대시보드**: 세션 종료 시 `Agent/_Dashboard.md` 자동 업데이트
+- **폴더 구조**: `{Category}/rag/{safe_topic}/manifest.json`
+- **대시보드**: 세션 종료 시 `_Dashboard.md` 자동 업데이트
 - **소스 경로 이동 시**: manifest의 `source_dirs`를 수동 수정하거나 재수집
 - **의존성**: `rank-bm25` (`pip install rank-bm25`)
 - **knowledge_tutor와의 차이**:
