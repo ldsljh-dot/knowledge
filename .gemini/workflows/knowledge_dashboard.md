@@ -45,7 +45,7 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 <tab label="Linux/macOS (Bash)">
 
 ```bash
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 DASHBOARD_FILE="$AGENT_DIR/_Dashboard.md"
 
 # 대시보드 생성
@@ -70,7 +70,7 @@ fi
 <tab label="Windows (PowerShell)">
 
 ```powershell
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 $DASHBOARD_FILE = "$AGENT_DIR/_Dashboard.md"
 
 # 대시보드 생성

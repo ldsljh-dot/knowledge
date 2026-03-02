@@ -58,32 +58,7 @@ try { python -c "import rank_bm25" *>$null } catch {
 </tab>
 </tabs>
 
-### Step 1-2: 기존 카테고리 확인
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
-```bash
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
-echo "📂 현재 사용 가능한 카테고리:"
-ls -F "$AGENT_DIR" 2>/dev/null | grep / | tr -d / || echo "  (없음)"
-```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
-Write-Host "📂 현재 사용 가능한 카테고리:"
-if (Test-Path $AGENT_DIR) {
-    Get-ChildItem -Path $AGENT_DIR -Directory | Select-Object -ExpandProperty Name
-} else { Write-Host "  (없음)" }
-```
-
-</tab>
-</tabs>
-
-### Step 1-3: 세미나 정보 입력 (대화형)
+### Step 1-2: 세미나 정보 입력 (대화형)
 
 사용자에게 아래 정보를 순서대로 질문합니다:
 
@@ -91,10 +66,9 @@ if (Test-Path $AGENT_DIR) {
    예: `PIM architecture overview`, `NVBit memory tracing`
 2. **"발표자(선택, 엔터로 건너뜀)?"**
    예: `홍길동`, `Jane Smith`
-3. **"어떤 카테고리에 저장할까요?"**
-   위 목록 중 선택하거나 새 이름 입력. 미입력 시 기본값 `Seminar` 사용.
 
-> **변수 확정**: `TOPIC`, `SPEAKER`(선택), `CATEGORY`
+사용자의 답변을 기반으로 `{TOPIC}`과 `{SPEAKER}` 변수를 확정합니다.
+저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `0-Inbox`로 설정합니다.
 
 ---
 
@@ -112,7 +86,7 @@ TOPIC="{TOPIC}"
 CATEGORY="{CATEGORY}"
 SAFE_TOPIC=$(echo "$TOPIC" | tr ' /' '__')
 SAFE_CATEGORY=$(echo "$CATEGORY" | tr ' /' '__')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH/Agent"
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 RAG_MANIFEST="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag/manifest.json"
 SOURCE_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
@@ -147,7 +121,7 @@ $TOPIC = "{TOPIC}"
 $CATEGORY = "{CATEGORY}"
 $SAFE_TOPIC = $TOPIC -replace '[ /]', '__'
 $SAFE_CATEGORY = $CATEGORY -replace '[ /]', '__'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH/Agent"
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 $RAG_MANIFEST = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag/manifest.json"
 $SOURCE_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
@@ -405,7 +379,7 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
   --content "{보강된_항목_내용}" \
   --summary "{ENTRY_TYPE}: {INPUT_TEXT 앞 50자}" \
   --category "$CATEGORY" \
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY" \
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
   --append
 ```
 
@@ -420,7 +394,7 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
   --content "{보강된_항목_내용}" `
   --summary "{ENTRY_TYPE}: {INPUT_TEXT 앞 50자}" `
   --category "$CATEGORY" `
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY" `
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
   --append
 ```
 
@@ -498,7 +472,7 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
   --content "{전체_SESSION_LOG_및_미답_질문_목록}" \
   --summary "세미나 완료: {N}항목 ({Q_COUNT}Q / {O_COUNT}O / {KEY_COUNT}Key), 미답 {UNANSWERED_COUNT}개" \
   --category "$CATEGORY" \
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY" \
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
   --append
 ```
 
@@ -515,7 +489,7 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
   --content "{전체_SESSION_LOG_및_미답_질문_목록}" `
   --summary "세미나 완료: {N}항목 ({Q_COUNT}Q / {O_COUNT}O / {KEY_COUNT}Key), 미답 {UNANSWERED_COUNT}개" `
   --category "$CATEGORY" `
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY" `
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
   --append
 ```
 
@@ -528,8 +502,8 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
 ✅ 세미나 기록 완료!
 
 📁 저장 위치:
-  - 세미나 노트: Agent/{CATEGORY}/{TOPIC}_seminar.md
-  - (RAG 있었다면) 소스: Agent/{CATEGORY}/{SAFE_TOPIC}/sources/
+  - 세미나 노트: {CATEGORY}/{TOPIC}_seminar.md
+  - (RAG 있었다면) 소스: {CATEGORY}/{SAFE_TOPIC}/sources/
 
 ❓ 미답 질문 {UNANSWERED_COUNT}개를 추후 연구하려면:
    /knowledge_tutor 실행 후 질문을 주제로 입력하세요.

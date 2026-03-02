@@ -7,8 +7,8 @@ generate_dashboard.py — Knowledge Agent 전체 현황 대시보드 생성
 
 사용법:
     python generate_dashboard.py \
-      --agent-dir "$OBSIDIAN_VAULT_PATH/Agent" \
-      --output "$OBSIDIAN_VAULT_PATH/Agent/_Dashboard.md"
+      --agent-dir "$OBSIDIAN_VAULT_PATH" \
+      --output "$OBSIDIAN_VAULT_PATH/_Dashboard.md"
 """
 
 import argparse
@@ -32,16 +32,19 @@ def load_manifests(agent_dir: Path) -> dict[str, list[dict]]:
     """agent_dir/{Category}/rag/{topic}/manifest.json 을 카테고리별로 수집"""
     categories: dict[str, list[dict]] = {}
 
-    for manifest_path in sorted(agent_dir.glob("*/*/rag/manifest.json")):
+    for manifest_path in sorted(agent_dir.rglob("rag/manifest.json")):
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except Exception:
             continue
 
-        # 경로에서 카테고리 추출: parts[0] = Category
+        # 경로에서 카테고리 추출: parts[0] = Category (예: 0-Inbox)
         rel = manifest_path.relative_to(agent_dir)
         category = rel.parts[0]
 
+        # 0-Inbox의 경우 0-Inbox/Topic_Name/rag/manifest.json 구조이므로 
+        # topic_name이 rel.parts[1]이 될 수 있지만, 현재 대시보드는 category별로 모음.
+        # 따라서 category 자체를 기준으로 수집하면 0-Inbox도 포함됨.
         manifest["_category"] = category
         categories.setdefault(category, []).append(manifest)
 
@@ -100,8 +103,8 @@ def generate_dashboard(agent_dir: Path) -> str:
             f"  `{len(manifests)}토픽 · {cat_files}파일 · {cat_kb} KB`"
         )
         lines.append("")
-        lines.append("| 토픽 | 식별자 | 파일 | 용량 | 업데이트 |")
-        lines.append("|------|--------|------|------|---------|")
+        lines.append("| 토픽 | 식별자 | 파일 | 용량 | 업데이트 | 액션 |")
+        lines.append("|------|--------|------|------|---------|------|")
 
         for m in manifests:
             topic      = m.get("topic", "")
@@ -110,8 +113,13 @@ def generate_dashboard(agent_dir: Path) -> str:
             fc         = m.get("file_count", 0)
             kb         = m.get("total_bytes", 0) // 1024
             updated    = m.get("updated", "")[:10]
+            
+            # Obsidian Shell Commands URI (Advanced URI 플러그인 필요)
+            # commandid는 사용자가 Obsidian에서 설정한 ID로 맞춰야 함
+            move_link = f"[🚚 Move](obsidian://advanced-uri?commandid=knowledge-move&parameter={identifier})"
+            
             lines.append(
-                f"| {topic} | `{identifier}` | {fc} | {kb} KB | {updated} |"
+                f"| {topic} | `{identifier}` | {fc} | {kb} KB | {updated} | {move_link} |"
             )
 
         lines.append("")

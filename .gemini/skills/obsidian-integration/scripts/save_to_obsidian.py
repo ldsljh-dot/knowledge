@@ -157,10 +157,10 @@ def save_note(
     vault.mkdir(parents=True, exist_ok=True)
 
     date_str   = datetime.now().strftime("%Y-%m-%d")
-    safe_topic = safe_filename(topic, max_length=60)
+    note_title = re.sub(r'[\\/*?:"<>|]', '_', topic)[:60].strip()
     category_dir = vault / category
     category_dir.mkdir(parents=True, exist_ok=True)
-    filepath   = unique_path(category_dir / f"{date_str}_{safe_topic}.md")
+    filepath   = unique_path(category_dir / f"{date_str}_{note_title}.md")
 
     note_text = build_note(
         topic=topic,
@@ -266,11 +266,11 @@ def append_session(
     vault = Path(vault_path)
     vault.mkdir(parents=True, exist_ok=True)
 
-    safe_topic = safe_filename(topic, max_length=60)
+    note_title = re.sub(r'[\\/*?:"<>|]', '_', topic)[:60].strip()
     now_str    = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    # 종합파일은 vault 루트(Agent/)에 저장 — 카테고리 서브폴더 없음
-    existing = find_existing_note(vault, safe_topic)
+    # 종합파일은 vault 루트에 저장 — 카테고리 서브폴더 없음
+    existing = find_existing_note(vault, note_title)
 
     if existing:
         old_text = existing.read_text(encoding="utf-8")
@@ -298,7 +298,7 @@ def append_session(
         return str(existing)
     else:
         # 새 누적 파일 생성 (날짜 없는 파일명)
-        filepath = vault / f"{safe_topic}.md"
+        filepath = vault / f"{note_title}.md"
         note_text = build_accumulated_note(
             topic=topic,
             content=content,

@@ -37,31 +37,34 @@ def main():
     print(f"  {'-'*40}  {'-'*8}  {'-'*5}  {'-'*7}")
 
     entries = []
-    for cat_dir in sorted(agent_dir.iterdir()):
-        if not cat_dir.is_dir():
+    
+    # rglob으로 모든 manifest.json을 찾아 토픽 폴더를 식별
+    # 단, .obsidian 같은 숨김 폴더나 플러그인 폴더는 제외
+    for manifest_path in sorted(agent_dir.rglob("rag/manifest.json")):
+        if ".obsidian" in manifest_path.parts:
             continue
-        cat = cat_dir.name
+            
+        # 경로에서 정보 추출: .../Vault/Category/[SubCategory]/.../Topic/rag/manifest.json
+        rag_dir = manifest_path.parent
+        topic_dir = rag_dir.parent
+        src_dir = topic_dir / "sources"
+        
+        # Vault 루트를 기준으로 한 상대 경로에서 "Category" 와 "Topic" 식별자를 만듦
+        try:
+            rel_topic_dir = topic_dir.relative_to(agent_dir)
+            identifier = str(rel_topic_dir).replace("\\", "/")
+        except ValueError:
+            continue
+            
+        src_files = list(src_dir.glob("*.md")) if src_dir.exists() else []
+        src_size  = sum(f.stat().st_size for f in src_files)
+        has_rag   = True
 
-        topic_set = set()
-        for item in cat_dir.iterdir():
-            if item.is_dir():
-                if (item / "sources").exists() or (item / "rag").exists():
-                    topic_set.add(item.name)
+        src_label  = f"{len(src_files)}파일" if src_files else "없음"
+        rag_label  = "✓"
 
-        for topic in sorted(topic_set):
-            src_dir = cat_dir / topic / "sources"
-            rag_dir = cat_dir / topic / "rag"
-
-            src_files = list(src_dir.glob("*.md")) if src_dir.exists() else []
-            src_size  = sum(f.stat().st_size for f in src_files)
-            has_rag   = (rag_dir / "manifest.json").exists()
-
-            identifier = f"{cat}/{topic}"
-            src_label  = f"{len(src_files)}파일" if src_files else "없음"
-            rag_label  = "✓" if has_rag else "✗"
-
-            entries.append(identifier)
-            print(f"  {identifier:<40}  {src_label:^8}  {rag_label:^5}  {fmt_size(src_size):>7}")
+        entries.append(identifier)
+        print(f"  {identifier:<40}  {src_label:^8}  {rag_label:^5}  {fmt_size(src_size):>7}")
 
     print()
     print(f"  총 {len(entries)}개 토픽")

@@ -36,16 +36,16 @@ from common.utils import load_env, safe_filename
 load_env()
 
 
-def to_relative(path: Path, vault_path: Path) -> str:
-    """vault_path 기준 상대경로로 변환. 실패 시 절대경로 반환."""
+def to_relative(path: Path, base: Path) -> str:
+    """base 기준 상대경로로 변환. 실패 시 절대경로 반환."""
     try:
-        return str(path.resolve().relative_to(vault_path.resolve()))
+        return str(path.resolve().relative_to(base.resolve()))
     except ValueError:
         return str(path.resolve())
 
 
-def scan_sources(source_dirs: list[str], vault_path: Path) -> dict:
-    """소스 디렉토리의 .md 파일 목록과 통계를 수집"""
+def scan_sources(source_dirs: list[str], base: Path) -> dict:
+    """소스 디렉토리의 .md 파일 목록과 통계를 수집 (base 기준 상대경로)"""
     files = []
     total_bytes = 0
     for src_dir in source_dirs:
@@ -56,7 +56,7 @@ def scan_sources(source_dirs: list[str], vault_path: Path) -> dict:
         for md in sorted(p.glob("*.md")):
             size = md.stat().st_size
             files.append({
-                "path": to_relative(md, vault_path),
+                "path": to_relative(md, base),
                 "name": md.name,
                 "size_bytes": size,
             })
@@ -106,14 +106,14 @@ def main() -> int:
     now = datetime.now().isoformat(timespec="seconds")
     existing = load_existing(manifest_path)
 
-    scan = scan_sources(args.sources_dir, vault_path)
+    scan = scan_sources(args.sources_dir, rag_dir)
 
     manifest = {
         "topic":        args.topic,
         "safe_topic":   safe_topic,
         "category":     args.category,
         "vault_path":   str(vault_path.resolve()),
-        "source_dirs":  [to_relative(Path(d), vault_path) for d in args.sources_dir],
+        "source_dirs":  [to_relative(Path(d), rag_dir) for d in args.sources_dir],
         "files":        scan["files"],
         "file_count":   scan["file_count"],
         "total_bytes":  scan["total_bytes"],
