@@ -364,5 +364,5 @@ python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_memos.py" dele
 추가 작업이 필요하시면:
   - 일정/메모 관리: /knowledge_personal
   - 지식 검색: /knowledge_query
-  - 지식 대시보드: /knowledge_dashboard
+
 ```

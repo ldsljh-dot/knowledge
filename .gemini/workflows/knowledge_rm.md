@@ -276,5 +276,5 @@ if ($LASTEXITCODE -ne 0) {
    /knowledge_tutor → '{topic}' 입력
 
 💡 현재 남은 토픽 목록:
-   /knowledge_dashboard
+   /knowledge_query → 토픽 선택 시 확인 가능
 ```

@@ -70,7 +70,7 @@ if ($LASTEXITCODE -ne 0) {
 사용자에게 위 목록을 참고하여 다음 정보를 텍스트로 입력받으세요.
 
 1. **"이동할 대상 토픽의 식별자(Category/Topic)를 위 목록에서 복사하여 붙여넣어 주세요."**
-   예: `0-Inbox/Transformer_Architecture`
+   예: `Inbox/Transformer_Architecture`
    변수: `{SOURCE_TOPIC}`
 
 2. **"새로운 대상 카테고리(PARA 구조)를 입력하세요."**
@@ -158,49 +158,7 @@ if ($LASTEXITCODE -ne 0) {
 
 ## Phase 3: 마무리
 
-### Step 3-1: 대시보드 업데이트
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
-```bash
-if [ -f .env ]; then set -a; source .env; set +a; fi
-if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
-
-AGENT_DIR="$OBSIDIAN_VAULT_PATH"
-
-python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" \
-  --agent-dir "$AGENT_DIR" \
-  --output "$AGENT_DIR/_Dashboard.md"
-
-if [ $? -ne 0 ]; then
-  echo "❌ 대시보드 업데이트 중 오류가 발생했습니다."
-  exit 1
-fi
-```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-
-python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" `
-  --agent-dir "$AGENT_DIR" `
-  --output "$AGENT_DIR/_Dashboard.md"
-
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "❌ 대시보드 업데이트 중 오류가 발생했습니다."
-  exit 1
-}
-```
-
-</tab>
-</tabs>
-
-### Step 3-2: 결과 요약
+### Step 3-1: 결과 요약
 
 ```
 ✅ 이동이 완료되었습니다!
@@ -211,5 +169,4 @@ if ($LASTEXITCODE -ne 0) {
   - 소스 파일 이동 완료
   - RAG Manifest 업데이트 완료
   - Obsidian 노트 이동 및 헤더 업데이트 완료
-  - 대시보드 업데이트 완료 (_Dashboard.md)
 ```

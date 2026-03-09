@@ -36,7 +36,7 @@ python3 -c "import tavily, rank_bm25" 2>/dev/null || { echo "📦 Installing dep
 **"오늘 기록할 세미나나 메모의 주제(Topic)는 무엇인가요?"**
 
 사용자의 답변을 `{TOPIC}` 변수에 저장합니다.
-저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `0-Inbox`로 설정합니다.
+저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `Inbox`로 설정합니다.
 
 ---
 
@@ -138,10 +138,22 @@ python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
 </tab>
 </tabs>
 
-**[Agent Action]**:
-검색 결과를 바탕으로 사용자의 메모를 **"전문적인 기술 노트"** 형태로 재구성합니다.
-- 단순 기록: "메모리 구조가 중요함"
-- 합성 결과: "AI 에이전트에서 **메모리 구조**는 핵심 병목 구간이며, 최신 논문에서는 이를 형태/기능/동역학으로 분류함."
+**[Agent Action] (핵심: 최고 수준의 밀도와 기술적 깊이를 갖춘 전문 보고서 작성)**:
+사용자의 짧은 메모, 단어, 혹은 지시를 단순 기록하거나 요약하는 수준에 머물러서는 **절대 안 됩니다**. 사용자의 입력과 검색된 RAG 컨텍스트(혹은 사전 지식)를 결합하여, **가장 밀도 높고 전문적인 "주간 보고서/기술 분석서" 수준의 구조화된 문서**로 확장하고 합성해야 합니다.
+
+**[작성 원칙 및 필수 포함 요소]**
+1. **기술적 깊이와 정량화**: 단순한 서술을 넘어 아키텍처, 병목 원인, 성능 수치(Bandwidth, Capacity, Parameter 등), 통신 인터페이스(CXL, PCIe, Ethernet 등) 등 정량적이고 구체적인 기술 스펙을 반드시 포함하여 작성하십시오.
+2. **비교 및 흐름 분석 (Tracking)**: 새로운 내용이 입력되면 이전 상태나 일반적인 기술 동향과 비교하여 "어떤 점이 개선되었는지", "어떤 이슈가 발생했는지", "앞으로의 목표는 무엇인지" 명확한 흐름을 작성하십시오.
+3. **구조화된 포맷팅 (Markdown)**: Bullet points, 굵은 글씨(**Bold**), 하위 계층 구조(Indent)를 적극 활용하여 가독성이 높고 꽉 채워진 형태의 보고서 형식으로 출력하십시오.
+4. **풍부한 배경 지식 통합**: 사용자의 메모가 짧더라도, 해당 키워드가 내포하는 도메인 지식(예: Data Center, Vision AI, CXL Pooling 등)을 스스로 확장하여 문서를 빈틈없이 채우십시오.
+
+- **나쁜 예 (단순 기록)**: "A사와 B사가 CXL 메모리 관련 미팅을 진행함."
+- **좋은 예 (밀도 높은 구조화)**:
+  - **A사-B사 기술 미팅 (CXL 기반 Memory Appliance)**:
+    - **핵심 논의**: 전통적인 IMDB를 넘어 AI 응용(KV Cache 오프로딩)을 위한 CXL Memory Box(EMA/CMA) 활용 방안 논의.
+    - **상세 스펙**: AIC-8DIMM (1TB@128GB) 적용 및 향후 20TB급 용량 확보를 위해 3DS RIMM 256GB 도입 계획.
+    - **향후 과제 및 이슈**: CXL Switch 연결 시 대역폭 하락(131GB/s -> 6GB/s) 원인 분석 및 펌웨어 최적화 진행 중.
+- **출력 형식**: 사용자가 입력한 단편적인 정보를 위와 같은 **최고 밀도의 구조화된 전문 보고서 포맷**으로 완전하게 탈바꿈시켜 출력하고 저장합니다.
 
 ### Step 3-3: Obsidian 누적 저장 (Append)
 
@@ -155,7 +167,7 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
   --summary "{한줄_요약}" \
   --category "$CATEGORY" \
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
-  --append
+  --realtime
 ```
 
 </tab>
@@ -163,25 +175,12 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
 
 ---
 
-## Phase 4: 안전 종료 및 대시보드 갱신
-
-세션 종료 시 전체 현황을 동기화합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
+## Phase 4: 안전 종료
 
 ```bash
-echo "📊 대시보드를 업데이트합니다..."
-python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" \
-  --agent-dir "$AGENT_DIR" \
-  --output "$AGENT_DIR/_Dashboard.md"
-
 echo "✅ 모든 세션 기록이 안전하게 저장되었습니다."
 echo "📁 파일 위치: $AGENT_DIR/$SAFE_CATEGORY"
 ```
-
-</tab>
-</tabs>
 
 ---
 

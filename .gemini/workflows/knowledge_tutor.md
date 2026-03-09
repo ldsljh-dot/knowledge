@@ -144,7 +144,7 @@ if ($env:ANTHROPIC_API_KEY) {
 예: `PyTorch autograd 동작 원리`, `CXL memory pooling`, `NVBit 메모리 추적`
 
 사용자의 답변을 `{TOPIC}` 변수에 저장합니다.
-저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `0-Inbox`로 설정합니다.
+저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `Inbox`로 설정합니다.
 
 ---
 
@@ -585,39 +585,39 @@ score_grade:
 
 ---
 
-### Step 2-4: Interactive Tutoring 루프
+### Step 2-4: Interactive Tutoring 루프 (심층 해석 및 지식 합성)
 
-수집된 자료를 **내부 컨텍스트**로 활용하며 다음 규칙으로 튜터링합니다:
+수집된 자료를 **내부 컨텍스트**로 활용하며 다음 규칙으로 튜터링을 진행합니다. 단순 문답이 아니라, 전문가가 논문 수준의 리포트를 작성하듯 **깊이 있는 해석과 통찰**을 제공해야 합니다.
 
-#### 튜터링 규칙
+#### 튜터링 핵심 규칙
 
-1. **Socratic Method 적용**
-   - 개념 설명 후 반드시 이해도 확인 질문 제시
-
-2. **정확성 우선**
-   - 수집된 자료에 근거해 답변
-   - 불확실한 내용은 "추가 검색이 필요합니다"라고 명시
-
-3. **한국어 응답 + 기술 용어 병기**
-   - 예: *"자동 미분(Automatic Differentiation)은..."*
-
-4. **학습 대화 기록**
-   - 모든 Q&A를 내부적으로 기록 → Phase 3에서 노트에 포함
-
-5. **신뢰도 항상 표시**
-   - 모든 답변 하단에 📊 RAG 신뢰도 배지를 포함
+1. **심층 해석 및 확장 (Detailed Synthesis)**
+   - 사용자의 질문이나 단편적인 키워드를 표면적으로만 대답하지 마십시오.
+   - 검색된 RAG 데이터를 바탕으로 그 이면의 아키텍처적, 수학적, 기술적 원리와 병목, 시사점 등을 상세히 구조화하여 설명합니다. (예: [원리 설명] - [구조적 특징] - [한계 및 해결책])
+2. **Socratic Method 연계**
+   - 방대하고 깊이 있는 지식을 전달한 후, 사용자가 제대로 이해했는지 또는 한 단계 더 깊은 사고를 유도하기 위한 날카로운 확인 질문을 마지막에 제시합니다.
+3. **정확성과 출처 명시**
+   - 수집된 자료에 근거해 학술적/기술적으로 정확하게 답변합니다.
+   - 불확실한 내용은 "추가 검색이 필요합니다"라고 명시합니다.
+4. **한국어 응답 + 기술 용어 병기**
+   - 예: *"자기 수정형 타이탄(Self-Modifying Titans)은 연속체 메모리 시스템(Continuum Memory System)과 결합하여..."*
+5. **학습 대화 기록 (실시간 저장)**
+   - 모든 심층 답변과 분석 내용을 출력한 직후, Step 2-5 절차에 따라 즉시 실시간으로 Obsidian에 저장합니다.
+6. **신뢰도 항상 표시**
+   - 모든 답변 하단에 📊 RAG 신뢰도 배지를 포함합니다.
 
 **답변 형식:**
 
 ```
-{답변 내용}
+**[전문가 심층 분석 리포트]**
+{여기에 풍부한 문단, 리스트, 강조(Bold) 등을 사용하여 논문/전문 보고서 수준의 깊이 있는 해석과 설명을 작성합니다.}
 
 📄 출처: {파일명} (chunk #{n}, score={s:.3f})
 
 ---
 📊 RAG 신뢰도: {배지} {신뢰도}%  ({검색된_청크_수}개 청크 참조, max_score={max_score:.3f})
 
-🤔 {이해도 확인 질문}
+🤔 {Socratic Method 기반의 심화 유도 질문}
 ```
 
 > ⚠️ 신뢰도가 🟠 낮음(20~49%) 또는 🔴 매우 낮음(0~19%)이면 다음 메시지를 강조:
@@ -625,7 +625,69 @@ score_grade:
 
 ---
 
-### Step 2-5: 추가 크롤링 요청 처리
+### Step 2-5: 실시간 Obsidian 저장 (Realtime Save)
+
+답변을 출력한 직후, 사용자의 질문과 방금 생성한 답변 내용을 Obsidian에 실시간으로 기록합니다.
+`--realtime` 플래그를 사용하여 마지막 세션에 내용을 이어서 추가합니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+# 환경 변수 로드
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
+
+# --realtime 플래그: 현재 세션 블록에 질문/답변 이어서 추가
+python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
+  --topic "{TOPIC}" \
+  --content "**Q:** {방금_사용자가_입력한_질문}
+
+**A:** {방금_생성한_답변_내용_전체}" \
+  --category "Knowledge_Tutor" \
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
+  --realtime
+
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
+
+python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
+  --topic "{TOPIC}" `
+  --content "**Q:** {방금_사용자가_입력한_질문}`n`n**A:** {방금_생성한_답변_내용_전체}" `
+  --category "Knowledge_Tutor" `
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
+  --realtime
+```
+
+</tab>
+</tabs>
+
+> 💡 **중요**: 답변을 사용자에게 제공한 후, 반드시 위 명령어를 실행하여 기록을 남기세요.
+
+---
+
+### Step 2-6: 추가 크롤링 요청 처리
 
 사용자가 다음 키워드를 입력하면 추가 웹 크롤링을 실행합니다:
 - `추가 검색`, `더 찾아봐`, `크롤링해줘`, `웹 검색`, `자료 추가`, `검색 보강`, `search more`
@@ -722,7 +784,7 @@ if ($LASTEXITCODE -ne 0) {
 
 ---
 
-### Step 2-6: 실시간 자동 추가 검색 (범위 초과 시)
+### Step 2-7: 실시간 자동 추가 검색 (범위 초과 시)
 
 사용자 질문이 수집된 자료 범위를 벗어나거나 신뢰도가 자동으로 낮게 측정되면 (신뢰도 < 20%):
 
@@ -800,21 +862,20 @@ if ($LASTEXITCODE -ne 0) {
 
 ---
 
-### Step 2-7: 종료 감지
+### Step 2-8: 종료 감지
 
 사용자가 다음 중 하나를 입력하면 Phase 3으로 이동:
 - `종료`, `exit`, `quit`, `그만`, `끝`, `done`
 
 ---
 
-## Phase 3: 결과 저장
+## Phase 3: 세션 종료 및 총괄 리포트 생성
 
-### Step 3-1: 전체 대화 내역 및 핵심 요약 정리
+세션 동안 `--realtime`으로 작성된 Obsidian 노트를 기반으로, 학습한 내용을 총괄적으로 정리하는 **상세 리포트**를 생성하여 노트 마지막에 덧붙입니다. 
 
-1. **전체 대화 기록(QA_HISTORY)**: Phase 2에서 진행된 모든 질문(User)과 답변(Assistant)을 생략 없이 텍스트로 누적합니다.
-2. **핵심 요약(SUMMARY)**: 전체 세션을 바탕으로 핵심 포인트 3~7개를 bullet point로 정리합니다.
-
-### Step 3-2: 통합 노트 저장 (전체 내역 포함) ⭐
+1. **컨텍스트 로드**: LLM은 현재 세션에서 다루었던 전체 Q&A 기록을 기반으로 학습 내용을 다시 읽어들입니다.
+2. **총괄 리포트 작성**: 단순 요약이 아닌, 이번 세션에서 파악한 기술적 핵심, 연관 관계, 그리고 시사점이 포함된 **"세션 총괄 요약 리포트(Session Executive Summary)"**를 마크다운 형식으로 작성합니다.
+3. **Obsidian 반영**: 작성된 리포트를 기존 노트의 마지막에 이어서 저장합니다.
 
 <tabs>
 <tab label="Linux/macOS (Bash)">
@@ -824,28 +885,22 @@ if ($LASTEXITCODE -ne 0) {
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
 AGENT_DIR="$OBSIDIAN_VAULT_PATH"
-OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
-# 소스 파일 목록 생성 (쉼표로 구분)
-SOURCES=$(ls "$OUTPUT_DIR"/*.md 2>/dev/null | tr '\n' ',' | sed 's/,$//')
-
-# --append 플래그: 동일 주제 파일이 있으면 세션 블록 누적 추가, 없으면 새로 생성
+# --realtime 플래그를 통해 총괄 리포트를 파일의 맨 마지막에 추가
 python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
   --topic "{TOPIC}" \
-  --content "{전체_대화_기록_QA_HISTORY}" \
-  --summary "{핵심_요약_SUMMARY}" \
-  --category "AI_Study" \
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
-  --sources "$SOURCES" \
-  --append
+  --content "
 
-if [ $? -ne 0 ]; then
-  echo "❌ Obsidian 노트 저장 중 오류가 발생했습니다."
-  exit 1
-fi
+---
+### 📝 세션 총괄 요약 리포트
+{AI가_생성한_상세_총괄_요약_리포트_내용}
+" \
+  --category "Knowledge_Tutor" \
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
+  --realtime
 ```
 
 </tab>
@@ -854,7 +909,7 @@ fi
 ```powershell
 if (Test-Path .env) {
     Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
+        if ($_ -match "^\s*[^#\s]+=") {
             $name, $value = $_.Split('=', 2)
             [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
         }
@@ -862,35 +917,23 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
-$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
 
-# 소스 파일 목록 생성 (쉼표로 구분)
-$SOURCES_LIST = Get-ChildItem -Path "$OUTPUT_DIR/*.md" | Select-Object -ExpandProperty FullName
-$SOURCES = $SOURCES_LIST -join ","
-
-# --append 플래그: 동일 주제 파일이 있으면 세션 블록 누적 추가, 없으면 새로 생성
+# PowerShell의 줄바꿈을 활용하여 리포트 추가
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
   --topic "{TOPIC}" `
-  --content "{전체_대화_기록_QA_HISTORY}" `
-  --summary "{핵심_요약_SUMMARY}" `
-  --category "AI_Study" `
+  --content "`n---`n### 📝 세션 총괄 요약 리포트`n{AI가_생성한_상세_총괄_요약_리포트_내용}`n" `
+  --category "Knowledge_Tutor" `
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
-  --sources "$SOURCES" `
-  --append
-
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "❌ Obsidian 노트 저장 중 오류가 발생했습니다."
-  exit 1
-}
+  --realtime
 ```
 
 </tab>
 </tabs>
 
-> 💡 **중요**: `{전체_대화_기록_QA_HISTORY}`에는 사용자와의 모든 대화 내용이 포함되어야 합니다. 요약본이 아닌 실제 대화 로그를 저장하세요.
+> 💡 **중요**: 리포트는 단순한 대화 나열이 아니라, 전문가가 이번 세션에서 탐구한 주제들의 흐름을 한눈에 파악할 수 있도록 구조화된 내용이어야 합니다.
 
 ### Step 3-2b: 학습 요약 Mem0 저장
 
@@ -936,44 +979,7 @@ if ($env:ANTHROPIC_API_KEY) {
 </tab>
 </tabs>
 
-### Step 3-3: 대시보드 업데이트
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
-```bash
-if [ -f .env ]; then set -a; source .env; set +a; fi
-if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
-
-AGENT_DIR="$OBSIDIAN_VAULT_PATH"
-
-python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" \
-  --agent-dir "$AGENT_DIR" \
-  --output "$AGENT_DIR/_Dashboard.md"
-
-if [ $? -ne 0 ]; then
-  echo "❌ 대시보드 업데이트 중 오류가 발생했습니다."
-  exit 1
-fi
-```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-
-python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" `
-  --agent-dir "$AGENT_DIR" `
-  --output "$AGENT_DIR/_Dashboard.md"
-```
-
-</tab>
-</tabs>
-
-### Step 3-4: 완료 메시지
+### Step 3-3: 완료 메시지
 
 ```
 ✅ 학습을 완료했습니다!
@@ -982,7 +988,6 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_das
   - 누적 노트: {CATEGORY}/{TOPIC}.md  ← 세션이 쌓일수록 기록이 누적됩니다
   - 원본 자료: {CATEGORY}/sources/{safe_topic}/ (총 N개 파일)
   - RAG manifest: {CATEGORY}/rag/{safe_topic}/manifest.json
-  - 대시보드: _Dashboard.md (업데이트됨)
 
 💡 같은 주제로 다음 세션을 진행하면 동일 노트에 '세션 2', '세션 3'... 이 추가됩니다.
 💡 다음에 이 주제를 다시 조회하려면:

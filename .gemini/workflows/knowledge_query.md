@@ -141,39 +141,58 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
-# 등록된 RAG manifest 목록 출력 — 카테고리별로 그룹화
+# 등록된 RAG manifest 목록 출력 — 재귀적 탐색 및 미등록 토픽 제안
 python3 -c "
-import os, json, math
-agent_dir = '$AGENT_DIR'
-print(f'{'식별자 (Category/SafeTopic)':<45} {'Topic':<35} {'파일':<5} {'KB':<6} {'Updated'}')
-print('-' * 105)
-if os.path.exists(agent_dir):
-    for category in sorted(os.listdir(agent_dir)):
-        cat_dir = os.path.join(agent_dir, category)
-        if not os.path.isdir(cat_dir):
+import os, json, math, pathlib
+agent_dir = pathlib.Path('$AGENT_DIR')
+print(f'{\"식별자 (Path relative to Vault)\":<55} {\"Topic\":<30} {\"파일\":<5} {\"KB\":<6} {\"Updated\"}')
+print('-' * 115)
+
+# 1. 기존 RAG manifest 탐색 (rglob으로 깊은 폴더까지)
+manifests_found = []
+if agent_dir.exists():
+    for manifest_path in sorted(agent_dir.rglob('rag/manifest.json')):
+        if '.obsidian' in manifest_path.parts: continue
+        try:
+            with open(manifest_path, 'r', encoding='utf-8') as f:
+                m = json.load(f)
+            rel_topic_dir = manifest_path.parent.parent.relative_to(agent_dir)
+            identifier = str(rel_topic_dir).replace('\\', '/')
+            size_kb = math.ceil(m.get('total_bytes', 0) / 1024)
+            manifests_found.append({
+                'id': identifier,
+                'topic': m.get('topic', ''),
+                'count': m.get('file_count', 0),
+                'kb': size_kb,
+                'updated': m.get('updated', '')[:10]
+            })
+        except Exception: continue
+
+for m in manifests_found:
+    print(f'  {m[\"id\"]:<53} {m[\"topic\"][:28]:<30} {m[\"count\"]: <5} {m[\"kb\"]: <6} {m[\"updated\"]}')
+
+# 2. 미등록 폴더 탐색 (Potential Topics: .md 파일이 있으나 rag/manifest.json이 없는 폴더)
+print(f'\\n[💡 Potential New Topics (No manifest yet)]')
+potential = []
+if agent_dir.exists():
+    for root, dirs, files in os.walk(agent_dir):
+        if 'rag' in dirs or '.git' in root or '.obsidian' in root or 'sources' in root:
             continue
-        
-        printed_header = False
-        # cat_dir 내의 폴더들을 topic으로 간주하고 rag/manifest.json 확인
-        for d in sorted(os.listdir(cat_dir)):
-            topic_dir = os.path.join(cat_dir, d)
-            if not os.path.isdir(topic_dir):
-                continue
-                
-            manifest_path = os.path.join(topic_dir, 'rag', 'manifest.json')
-            if not os.path.isfile(manifest_path):
-                continue
+        md_files = [f for f in files if f.endswith('.md')]
+        if md_files:
             try:
-                with open(manifest_path, 'r', encoding='utf-8') as f:
-                    m = json.load(f)
-                if not printed_header:
-                    print(f'[{category}]')
-                    printed_header = True
-                identifier = f'{category}/{m.get(\"safe_topic\", d)}'
-                size_kb = math.ceil(m.get('total_bytes', 0) / 1024)
-                print(f'  {identifier:<43} {m.get(\"topic\", \"\")[:33]:<35} {m.get(\"file_count\", 0):<5} {size_kb:<6} {m.get(\"updated\", \"\")[:10]}')
-            except Exception:
-                continue
+                rel_path = pathlib.Path(root).relative_to(agent_dir)
+                if str(rel_path) == '.': continue
+                p_str = str(rel_path).replace('\\', '/')
+                # 이미 manifest가 있는 폴더이거나 그 하위인 경우 제외
+                if not any(p_str.startswith(m['id']) for m in manifests_found):
+                    potential.append(p_str)
+            except Exception: continue
+
+for p in sorted(potential)[:15]: # 상위 15개만 표시
+    print(f'  - {p}')
+if len(potential) > 15:
+    print(f'  ... 외 {len(potential)-15}개 더 있음')
 "
 ```
 
@@ -195,38 +214,55 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 $AGENT_DIR_PY = $AGENT_DIR -replace '\\', '/'
 
-# 등록된 RAG manifest 목록 출력 — 카테고리별로 그룹화
+# 등록된 RAG manifest 목록 출력 — 재귀적 탐색 및 미등록 토픽 제안
 python -c "
-import os, json, math
-agent_dir = '$AGENT_DIR_PY'
-print(f'{'식별자 (Category/SafeTopic)':<45} {'Topic':<35} {'파일':<5} {'KB':<6} {'Updated'}')
-print('-' * 105)
-if os.path.exists(agent_dir):
-    for category in sorted(os.listdir(agent_dir)):
-        cat_dir = os.path.join(agent_dir, category)
-        if not os.path.isdir(cat_dir):
-            continue
-        
-        printed_header = False
-        for d in sorted(os.listdir(cat_dir)):
-            topic_dir = os.path.join(cat_dir, d)
-            if not os.path.isdir(topic_dir):
-                continue
+import os, json, math, pathlib
+agent_dir = pathlib.Path(r'$AGENT_DIR_PY')
+print(f'{\"식별자 (Path relative to Vault)\":<55} {\"Topic\":<30} {\"파일\":<5} {\"KB\":<6} {\"Updated\"}')
+print('-' * 115)
 
-            manifest_path = os.path.join(topic_dir, 'rag', 'manifest.json')
-            if not os.path.isfile(manifest_path):
-                continue
+manifests_found = []
+if agent_dir.exists():
+    for manifest_path in sorted(agent_dir.rglob('rag/manifest.json')):
+        if '.obsidian' in manifest_path.parts: continue
+        try:
+            with open(manifest_path, 'r', encoding='utf-8') as f:
+                m = json.load(f)
+            rel_topic_dir = manifest_path.parent.parent.relative_to(agent_dir)
+            identifier = str(rel_topic_dir).replace('\\', '/')
+            size_kb = math.ceil(m.get('total_bytes', 0) / 1024)
+            manifests_found.append({
+                'id': identifier,
+                'topic': m.get('topic', ''),
+                'count': m.get('file_count', 0),
+                'kb': size_kb,
+                'updated': m.get('updated', '')[:10]
+            })
+        except Exception: continue
+
+for m in manifests_found:
+    print(f'  {m[\"id\"]:<53} {m[\"topic\"][:28]:<30} {m[\"count\"]: <5} {m[\"kb\"]: <6} {m[\"updated\"]}')
+
+print(f'\\n[💡 Potential New Topics (No manifest yet)]')
+potential = []
+if agent_dir.exists():
+    for root, dirs, files in os.walk(agent_dir):
+        if 'rag' in dirs or '.git' in root or '.obsidian' in root or 'sources' in root:
+            continue
+        md_files = [f for f in files if f.endswith('.md')]
+        if md_files:
             try:
-                with open(manifest_path, 'r', encoding='utf-8') as f:
-                    m = json.load(f)
-                if not printed_header:
-                    print(f'[{category}]')
-                    printed_header = True
-                identifier = f'{category}/{m.get(\"safe_topic\", d)}'
-                size_kb = math.ceil(m.get('total_bytes', 0) / 1024)
-                print(f'  {identifier:<43} {m.get(\"topic\", \"\")[:33]:<35} {m.get(\"file_count\", 0):<5} {size_kb:<6} {m.get(\"updated\", \"\")[:10]}')
-            except Exception:
-                continue
+                rel_path = pathlib.Path(root).relative_to(agent_dir)
+                if str(rel_path) == '.': continue
+                p_str = str(rel_path).replace('\\', '/')
+                if not any(p_str.startswith(m['id']) for m in manifests_found):
+                    potential.append(p_str)
+            except Exception: continue
+
+for p in sorted(potential)[:15]:
+    print(f'  - {p}')
+if len(potential) > 15:
+    print(f'  ... 외 {len(potential)-15}개 더 있음')
 "
 ```
 
@@ -248,17 +284,16 @@ if os.path.exists(agent_dir):
 사용자에게 질문합니다:
 
 > **"어떤 주제를 검색하시겠습니까?**
-> 위 목록의 **식별자** (`Category/SafeTopic`)를 입력하거나, 카테고리명만 입력해 해당 범주 전체를 검색합니다."
+> 위 목록의 **식별자** (`Path/to/Topic`)를 입력하세요. 목록에 없는 폴더 경로를 직접 입력하여 새로 RAG를 생성할 수도 있습니다."
 
 #### 입력 유형별 처리
 
 | 입력 | 처리 |
 |------|------|
-| `NVBit/safe_topic` (식별자 완전 일치) | 해당 manifest 로드 → Step 1-3 |
-| `NVBit` (카테고리명만) | 해당 카테고리의 모든 manifest source_dirs 합산 |
-| `전체` 또는 `all` | 전체 카테고리 모든 manifest 합산 |
-| `NVBit/..., PyTorch/...` (쉼표 구분) | 해당 manifest들 병합 |
-| 목록에 **없는** 새 주제 | Step 1-4 (RAG 생성 흐름 실행) |
+| `Path/to/Topic` (식별자 완전 일치) | 해당 manifest 로드 → Step 1-3 |
+| `전체` 또는 `all` | 전체 모든 manifest 합산 (Step 2-7 참조) |
+| `Topic1, Topic2` (쉼표 구분) | 해당 manifest들 병합 |
+| 목록에 **없는** 경로 | 해당 폴더에 .md 파일이 있으면 Step 1-4 (RAG 생성) |
 
 ---
 
@@ -268,30 +303,36 @@ if os.path.exists(agent_dir):
 <tab label="Linux/macOS (Bash)">
 
 ```bash
-# SELECTION 형식: "Category/safe_topic" (Step 1-1 목록의 식별자)
+# SELECTION 형식: "Path/to/Topic" (Step 1-1 목록의 식별자)
 SELECTION="{선택한_식별자}"
 if [ -f .env ]; then set -a; source .env; set +a; fi
-CATEGORY="${SELECTION%%/*}"
-SAFE_TOPIC="${SELECTION##*/}"
 AGENT_DIR="$OBSIDIAN_VAULT_PATH"
-MANIFEST_PATH="$AGENT_DIR/$CATEGORY/$SAFE_TOPIC/rag/manifest.json"
+MANIFEST_PATH="$AGENT_DIR/$SELECTION/rag/manifest.json"
 
 if [ -f "$MANIFEST_PATH" ]; then
     eval $(python3 -c "
-import json, os
+import json, os, pathlib
 with open('$MANIFEST_PATH', 'r', encoding='utf-8') as f:
     m = json.load(f)
-vault = m.get('vault_path') or os.environ.get('OBSIDIAN_VAULT_PATH', '')
-dirs = [os.path.join(vault, d) if not os.path.isabs(d) else d for d in m.get('source_dirs', [])]
+# source_dirs를 절대경로로 변환
+manifest_dir = pathlib.Path('$MANIFEST_PATH').parent
+dirs = []
+for d in m.get('source_dirs', []):
+    p = pathlib.Path(d)
+    if not p.is_absolute():
+        p = (manifest_dir / p).resolve()
+    dirs.append(str(p))
 print(f'SOURCE_DIRS=\"{chr(44).join(dirs)}\"')
 print(f'FILE_COUNT={m.get(\"file_count\", 0)}')
 print(f'TOTAL_KB={int(m.get(\"total_bytes\", 0)/1024)}')
+print(f'TOPIC=\"{m.get(\"topic\", \"\")}\"')
 ")
-    echo "📂 카테고리: $CATEGORY / 토픽: $SAFE_TOPIC"
+    echo "📂 토픽 식별자: $SELECTION"
+    echo "📝 주제: $TOPIC"
     echo "📄 파일 수: $FILE_COUNT개 ($TOTAL_KB KB)"
-    echo "📁 소스 경로: $SOURCE_DIRS"
 else
     echo "⚠️ manifest를 찾을 수 없습니다: $MANIFEST_PATH"
+    echo "신규 토픽인 경우 Step 1-4를 진행하세요."
 fi
 ```
 
@@ -299,7 +340,7 @@ fi
 <tab label="Windows (PowerShell)">
 
 ```powershell
-# SELECTION 형식: "Category/safe_topic" (Step 1-1 목록의 식별자)
+# SELECTION 형식: "Path/to/Topic" (Step 1-1 목록의 식별자)
 $SELECTION = "{선택한_식별자}"
 if (Test-Path .env) {
     Get-Content .env | ForEach-Object {
@@ -309,33 +350,38 @@ if (Test-Path .env) {
         }
     }
 }
-$CATEGORY  = $SELECTION.Split('/')[0]
-$SAFE_TOPIC = $SELECTION.Split('/', 2)[1]
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-$MANIFEST_PATH = "$AGENT_DIR/$CATEGORY/$SAFE_TOPIC/rag/manifest.json"
+$MANIFEST_PATH = Join-Path $AGENT_DIR $SELECTION "rag/manifest.json"
 
 if (Test-Path $MANIFEST_PATH) {
     $MANIFEST_PATH_PY = $MANIFEST_PATH -replace '\\', '/'
 
     $manifestData = python -c "
-import json, os
-with open('$MANIFEST_PATH_PY', 'r', encoding='utf-8') as f:
+import json, os, pathlib
+with open(r'$MANIFEST_PATH_PY', 'r', encoding='utf-8') as f:
     m = json.load(f)
-vault = m.get('vault_path') or os.environ.get('OBSIDIAN_VAULT_PATH', '')
-dirs = [os.path.join(vault, d) if not os.path.isabs(d) else d for d in m.get('source_dirs', [])]
+manifest_dir = pathlib.Path(r'$MANIFEST_PATH_PY').parent
+dirs = []
+for d in m.get('source_dirs', []):
+    p = pathlib.Path(d)
+    if not p.is_absolute():
+        p = (manifest_dir / p).resolve()
+    dirs.append(str(p))
 print(f'SOURCE_DIRS={','.join(dirs)}')
 print(f'FILE_COUNT={m.get(\"file_count\", 0)}')
 print(f'TOTAL_KB={int(m.get(\"total_bytes\", 0)/1024)}')
+print(f'TOPIC={m.get(\"topic\", \"\")}')
 "
     $manifestData | ForEach-Object {
         $n, $v = $_.Split('=', 2)
         Set-Variable -Name $n -Value $v
     }
-    Write-Host "📂 카테고리: $CATEGORY / 토픽: $SAFE_TOPIC"
+    Write-Host "📂 토픽 식별자: $SELECTION"
+    Write-Host "📝 주제: $TOPIC"
     Write-Host "📄 파일 수: $FILE_COUNT개 ($TOTAL_KB KB)"
-    Write-Host "📁 소스 경로: $SOURCE_DIRS"
 } else {
     Write-Host "⚠️ manifest를 찾을 수 없습니다: $MANIFEST_PATH"
+    Write-Host "신규 토픽인 경우 Step 1-4를 진행하세요."
 }
 ```
 
@@ -346,48 +392,45 @@ print(f'TOTAL_KB={int(m.get(\"total_bytes\", 0)/1024)}')
 
 ### Step 1-3b: 이전 학습 기록 확인 및 로드
 
-manifest 로드 직후, 해당 카테고리 폴더에서 이전 학습 기록을 자동 탐색합니다.
+manifest 로드 직후, 해당 토픽 폴더에서 이전 학습 기록을 자동 탐색합니다.
 이전 기록이 있으면 **어디까지 배웠는지 요약**하여 표시하고, 이어서 학습을 진행합니다.
 
 <tabs>
 <tab label="Linux/macOS (Bash)">
 
 ```bash
-# CATEGORY, SAFE_TOPIC, TOPIC은 Step 1-3에서 설정된 변수 사용
+# SELECTION, TOPIC은 Step 1-3에서 설정된 변수 사용
 AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
 python3 -c "
-import os, glob
+import os, glob, pathlib
 
-cat_dir = os.path.join('$AGENT_DIR', '$CATEGORY')
+topic_dir = os.path.join('$AGENT_DIR', '$SELECTION')
 topic = '$TOPIC'
-safe_topic = '$SAFE_TOPIC'
 
-# 1. 종합 누적 노트 탐색: knowledge_tutor가 --append로 생성한 파일
+# 1. 종합 누적 노트 탐색
 cumulative = []
 for candidate in [
-    os.path.join(cat_dir, topic + '.md'),
-    os.path.join(cat_dir, safe_topic + '.md'),
+    os.path.join(topic_dir, topic + '.md'),
+    os.path.join(topic_dir, os.path.basename('$SELECTION') + '.md'),
 ]:
     if os.path.isfile(candidate):
         cumulative.append(candidate)
 
-# 2. 세션 노트 탐색: 날짜_topic 또는 topic_조회 패턴
+# 2. 세션 노트 탐색
 session_notes = []
-for f in glob.glob(os.path.join(cat_dir, f'*{safe_topic}*.md')):
+for f in glob.glob(os.path.join(topic_dir, '*.md')):
     bn = os.path.basename(f)
-    # 누적 노트 자체는 제외
-    if bn not in [topic + '.md', safe_topic + '.md']:
+    if bn not in [topic + '.md', os.path.basename('$SELECTION') + '.md']:
         session_notes.append(f)
 session_notes.sort(key=os.path.getmtime, reverse=True)
 
-# 결과 출력
 found = cumulative + session_notes
 if found:
     print('PREV_NOTES_FOUND=true')
     for f in cumulative:
         print(f'CUMULATIVE_NOTE={f}')
-    for f in session_notes[:3]:  # 최근 3개만
+    for f in session_notes[:3]:
         print(f'SESSION_NOTE={f}')
 else:
     print('PREV_NOTES_FOUND=false')
@@ -398,29 +441,28 @@ else:
 <tab label="Windows (PowerShell)">
 
 ```powershell
-# CATEGORY, SAFE_TOPIC, TOPIC은 Step 1-3에서 설정된 변수 사용
+# SELECTION, TOPIC은 Step 1-3에서 설정된 변수 사용
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 $AGENT_DIR_PY = $AGENT_DIR -replace '\\', '/'
 
 python -c "
-import os, glob
+import os, glob, pathlib
 
-cat_dir = os.path.join('$AGENT_DIR_PY', '$CATEGORY')
+topic_dir = os.path.join(r'$AGENT_DIR_PY', r'$SELECTION')
 topic = '$TOPIC'
-safe_topic = '$SAFE_TOPIC'
 
 cumulative = []
 for candidate in [
-    os.path.join(cat_dir, topic + '.md'),
-    os.path.join(cat_dir, safe_topic + '.md'),
+    os.path.join(topic_dir, topic + '.md'),
+    os.path.join(topic_dir, os.path.basename(r'$SELECTION') + '.md'),
 ]:
     if os.path.isfile(candidate):
         cumulative.append(candidate)
 
 session_notes = []
-for f in glob.glob(os.path.join(cat_dir, f'*{safe_topic}*.md')):
+for f in glob.glob(os.path.join(topic_dir, '*.md')):
     bn = os.path.basename(f)
-    if bn not in [topic + '.md', safe_topic + '.md']:
+    if bn not in [topic + '.md', os.path.basename(r'$SELECTION') + '.md']:
         session_notes.append(f)
 session_notes.sort(key=os.path.getmtime, reverse=True)
 
@@ -464,45 +506,36 @@ else:
 
 ---
 
-### Step 1-4: RAG 없음 — 자동 수집 흐름 실행 ⭐
+### Step 1-4: RAG 없음 — 자동 생성 흐름 실행 ⭐
 
-조회한 주제의 manifest가 없거나 소스가 손상된 경우,
-**`knowledge_tutor` Phase 1 + manifest 생성**을 자동으로 실행합니다.
+조회한 주제의 manifest가 없거나 신규 폴더인 경우, RAG manifest를 자동으로 생성합니다.
 
-```
-🔍 '{TOPIC}'에 대한 RAG manifest가 없습니다.
-   지금 자료를 수집하고 RAG를 생성하시겠습니까? (y/n)
-   (어떤 카테고리에 저장할지도 함께 입력해주세요. 예: NVBit, PyTorch)
-```
+#### 1-4-a: RAG Manifest 생성 (기존 폴더 활용)
 
-**`y` 입력 시 순서대로 실행:**
-
-#### 1-4-a: Tavily 검색 수집
+이미 폴더 내에 `.md` 파일들이 있는 경우, 해당 폴더를 소스로 하여 즉시 RAG를 생성합니다.
 
 <tabs>
 <tab label="Linux/macOS (Bash)">
 
 ```bash
-# 환경 변수 로드 및 AGENT_ROOT 설정
+# SELECTION: "Path/to/Topic"
+# TOPIC_NAME: 사용자가 지정할 토픽 이름 (예: "Flash Attention 분석")
+SELECTION="{선택한_식별자}"
+TOPIC_NAME="{토픽_이름}"
+
 if [ -f .env ]; then set -a; source .env; set +a; fi
-if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
-
-SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
-SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
 AGENT_DIR="$OBSIDIAN_VAULT_PATH"
-OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+SOURCE_DIR="$AGENT_DIR/$SELECTION"
+RAG_DIR="$SOURCE_DIR/rag"
 
-python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
-  --query "{TOPIC}" \
-  --output-dir "$OUTPUT_DIR" \
-  --max-results 5 \
-  --search-depth advanced \
-  --use-jina \
-  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" \
-  --min-content-length 300
+python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
+  --topic "$TOPIC_NAME" \
+  --sources-dir "$SOURCE_DIR" \
+  --output-dir "$RAG_DIR" \
+  --vault-path "$OBSIDIAN_VAULT_PATH"
 
 if [ $? -ne 0 ]; then
-  echo "❌ 검색 중 오류가 발생했습니다."
+  echo "❌ Manifest 생성 중 오류가 발생했습니다."
   exit 1
 fi
 ```
@@ -511,6 +544,9 @@ fi
 <tab label="Windows (PowerShell)">
 
 ```powershell
+$SELECTION = "{선택한_식별자}"
+$TOPIC_NAME = "{토픽_이름}"
+
 if (Test-Path .env) {
     Get-Content .env | ForEach-Object {
         if ($_ -match "^\s*[^#\s]+=.*$") {
@@ -519,24 +555,18 @@ if (Test-Path .env) {
         }
     }
 }
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
-$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+$SOURCE_DIR = Join-Path $AGENT_DIR $SELECTION
+$RAG_DIR = Join-Path $SOURCE_DIR "rag"
 
-python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
-  --query "{TOPIC}" `
-  --output-dir "$OUTPUT_DIR" `
-  --max-results 5 `
-  --search-depth advanced `
-  --use-jina `
-  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" `
-  --min-content-length 300
+python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
+  --topic "$TOPIC_NAME" `
+  --sources-dir "$SOURCE_DIR" `
+  --output-dir "$RAG_DIR" `
+  --vault-path "$env:OBSIDIAN_VAULT_PATH"
 
 if ($LASTEXITCODE -ne 0) {
-  Write-Host "❌ 검색 중 오류가 발생했습니다."
+  Write-Host "❌ Manifest 생성 중 오류가 발생했습니다."
   exit 1
 }
 ```
@@ -750,22 +780,24 @@ score_grade:
 
 ---
 
-### Step 2-4: 청크 기반 답변 생성
+### Step 2-4: 청크 기반 심층 답변 생성 (Detailed Synthesis)
 
-검색된 청크를 내부 컨텍스트로 활용하여 다음 규칙으로 답변합니다:
+검색된 청크를 내부 컨텍스트로 활용하여 다음 규칙으로 답변을 생성합니다. 단순한 1~2문장의 답변이 아니라, 전문가가 기존 지식을 재해석하여 **논문/리포트 수준의 상세한 구조화된 답변**을 작성해야 합니다.
 
-1. **근거 기반 답변**: 검색된 청크에 있는 내용을 인용하여 답변
-2. **출처 명시**: 답변 마지막에 `📄 출처: {파일명} (chunk #{n}, score={s})` 형식으로 표기
-3. **범위 초과 처리**: 청크에 관련 내용이 없으면:
+1. **심층 해석 및 구조화**: 사용자의 질문에 대해 단순히 "예/아니오"나 단답형으로 대답하지 마십시오. RAG 청크의 세부 원리, 아키텍처 특성, 발생 가능한 문제점 등을 종합하여 [원리] - [상세 분석] - [시사점] 등으로 구조화된 리포트를 작성합니다.
+2. **근거 기반 답변**: 검색된 청크에 있는 구체적인 수치나 기술적 팩트를 인용하여 논리를 전개합니다.
+3. **출처 명시**: 답변 마지막에 `📄 출처: {파일명} (chunk #{n}, score={s})` 형식으로 표기합니다.
+4. **범위 초과 처리**: 청크에 관련 내용이 없으면:
    - `"수집된 자료에 해당 내용이 없습니다."`
    - `→ 다른 토픽 추가 검색 or knowledge_tutor로 신규 수집` 제안
-4. **한국어 답변 + 기술 용어 병기**
-5. **신뢰도 항상 표시**: 모든 답변 하단에 📊 RAG 신뢰도 배지를 포함
+5. **한국어 답변 + 기술 용어 병기**
+6. **신뢰도 항상 표시**: 모든 답변 하단에 📊 RAG 신뢰도 배지를 포함합니다.
 
 **답변 형식:**
 
 ```
-{답변 내용}
+**[전문가 심층 분석 리포트]**
+{여기에 풍부한 문단, 리스트, 강조(Bold) 등을 사용하여 질문에 대한 논문/전문 보고서 수준의 깊이 있는 해석과 설명을 작성합니다.}
 
 📄 출처: {파일명} (chunk #{n}, score={s:.3f})
 ...
@@ -776,9 +808,70 @@ score_grade:
 
 ---
 
-### Step 2-5: 후속 안내
+### Step 2-5: 실시간 Obsidian 저장 (Realtime Save)
 
-답변 후 항상 안내합니다:
+답변을 출력한 직후, 사용자의 질문과 방금 생성한 답변 내용을 Obsidian에 실시간으로 기록합니다.
+`--realtime` 플래그를 사용하여 마지막 세션에 내용을 이어서 추가합니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+# 환경 변수 로드
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
+AGENT_DIR="$OBSIDIAN_VAULT_PATH"
+
+# --realtime 플래그: 현재 세션 블록에 질문/답변 이어서 추가
+python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
+  --topic "{TOPIC}" \
+  --content "**Q:** {방금_사용자가_입력한_질문}
+
+**A:** {방금_생성한_답변_내용_전체}" \
+  --category "Knowledge_Query" \
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
+  --realtime
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
+$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
+
+python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
+  --topic "{TOPIC}" `
+  --content "**Q:** {방금_사용자가_입력한_질문}`n`n**A:** {방금_생성한_답변_내용_전체}" `
+  --category "Knowledge_Query" `
+  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
+  --realtime
+```
+
+</tab>
+</tabs>
+
+> 💡 **중요**: 답변을 사용자에게 제공한 후, 반드시 위 명령어를 실행하여 기록을 남기세요.
+
+---
+
+### Step 2-6: 후속 안내
+
+답변 및 저장 완료 후 항상 안내합니다:
 
 ```
 [계속]    다른 질문을 입력하세요.
@@ -792,7 +885,7 @@ score_grade:
 
 ---
 
-### Step 2-6: 추가 크롤링 요청 처리
+### Step 2-7: 추가 크롤링 요청 처리
 
 사용자가 다음 키워드를 입력하면 추가 웹 크롤링을 실행합니다:
 - `추가 검색`, `더 찾아봐`, `크롤링해줘`, `웹 검색`, `자료 추가`, `검색 보강`, `search more`
@@ -890,7 +983,7 @@ if ($LASTEXITCODE -ne 0) {
 
 ---
 
-### Step 2-7: 다중 토픽 동시 검색
+### Step 2-8: 다중 토픽 동시 검색
 
 사용자가 `[범위]`를 요청하거나 처음에 복수 토픽을 지정한 경우:
 
@@ -1002,16 +1095,20 @@ foreach ($dir in $DIRS) {
 
 ---
 
-### Step 2-8: 종료 감지
+### Step 2-9: 종료 감지
 
 사용자가 다음 중 하나를 입력하면 Phase 3으로 이동:
 - `종료`, `exit`, `quit`, `그만`, `끝`, `done`
 
 ---
 
-## Phase 3: 세션 Q&A Obsidian 저장 (전체 내역 포함)
+## Phase 3: 세션 종료 및 총괄 리포트 생성
 
-세션 동안의 **모든 질문과 답변(QA_HISTORY)**을 생략 없이 누적하여 저장합니다.
+세션 동안 `--realtime`으로 작성된 Obsidian 노트를 기반으로, 학습한 내용을 총괄적으로 정리하는 **상세 리포트**를 생성하여 노트 마지막에 덧붙입니다. 
+
+1. **컨텍스트 로드**: LLM은 현재 세션에서 다루었던 전체 Q&A 기록을 기반으로 학습 내용을 다시 읽어들입니다.
+2. **총괄 리포트 작성**: 단순 요약이 아닌, 이번 세션에서 파악한 기술적 핵심, 연관 관계, 그리고 시사점이 포함된 **"세션 총괄 요약 리포트(Session Executive Summary)"**를 마크다운 형식으로 작성합니다.
+3. **Obsidian 반영**: 작성된 리포트를 기존 노트의 마지막에 이어서 저장합니다.
 
 <tabs>
 <tab label="Linux/macOS (Bash)">
@@ -1022,26 +1119,21 @@ if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
 AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
-# --append 플래그: 동일 주제 파일이 있으면 세션 블록 누적 추가, 없으면 새로 생성
+# --realtime 플래그를 통해 총괄 리포트를 파일의 맨 마지막에 추가
 python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
-  --topic "{검색_주제}_조회" \
-  --content "{전체_Q&A_기록_QA_HISTORY}" \
-  --summary "{핵심_포인트_SUMMARY}" \
+  --topic "{TOPIC}" \
+  --content "
+
+---
+### 📝 세션 총괄 요약 리포트
+{AI가_생성한_상세_총괄_요약_리포트_내용}
+" \
   --category "Knowledge_Query" \
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
-  --append
-
-# 대시보드 업데이트
-python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" \
-  --agent-dir "$AGENT_DIR" \
-  --output "$AGENT_DIR/_Dashboard.md"
-
-if [ $? -ne 0 ]; then
-  echo "❌ 세션 저장 또는 대시보드 업데이트 중 오류가 발생했습니다."
-  exit 1
-fi
+  --realtime
 ```
 
 </tab>
@@ -1059,32 +1151,22 @@ if (Test-Path .env) {
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 
-# --append 플래그: 동일 주제 파일이 있으면 세션 블록 누적 추가, 없으면 새로 생성
+# PowerShell의 줄바꿈을 활용하여 리포트 추가
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
-  --topic "{검색_주제}_조회" `
-  --content "{전체_Q&A_기록_QA_HISTORY}" `
-  --summary "{핵심_포인트_SUMMARY}" `
+  --topic "{TOPIC}" `
+  --content "`n---`n### 📝 세션 총괄 요약 리포트`n{AI가_생성한_상세_총괄_요약_리포트_내용}`n" `
   --category "Knowledge_Query" `
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
-  --append
-
-# 대시보드 업데이트
-python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" `
-  --agent-dir "$AGENT_DIR" `
-  --output "$AGENT_DIR/_Dashboard.md"
-
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "❌ 세션 저장 또는 대시보드 업데이트 중 오류가 발생했습니다."
-  exit 1
-}
+  --realtime
 ```
 
 </tab>
 </tabs>
 
-> 💡 **중요**: 요약이 아닌 실제 사용자와의 모든 문답 로그를 `{전체_Q&A_기록_QA_HISTORY}`에 포함하여 저장하세요.
+> 💡 **중요**: 리포트는 단순한 대화 나열이 아니라, 전문가가 이번 세션에서 탐구한 주제들의 흐름을 한눈에 파악할 수 있도록 구조화된 내용이어야 합니다.
 
 ### Phase 3-b: Q&A 요약 Mem0 저장
 
@@ -1201,7 +1283,6 @@ AI: 세션을 Obsidian에 저장하시겠습니까? (y/n)
 
 - **전제 조건**: `knowledge_tutor`로 수집 + manifest 생성이 먼저 필요
 - **폴더 구조**: `{Category}/rag/{safe_topic}/manifest.json`
-- **대시보드**: 세션 종료 시 `_Dashboard.md` 자동 업데이트
 - **소스 경로 이동 시**: manifest의 `source_dirs`를 수동 수정하거나 재수집
 - **의존성**: `rank-bm25` (`pip install rank-bm25`)
 - **knowledge_tutor와의 차이**:
