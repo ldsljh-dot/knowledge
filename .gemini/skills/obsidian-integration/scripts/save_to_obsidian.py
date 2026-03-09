@@ -256,6 +256,7 @@ def append_session(
     vault_path: str,
     sources: Optional[List[str]] = None,
     status: str = "🌿 seed",
+    realtime: bool = False,
 ) -> str:
     """
     기존 누적 노트에 새 세션 추가. 없으면 새 파일 생성.
@@ -275,9 +276,6 @@ def append_session(
     if existing:
         old_text = existing.read_text(encoding="utf-8")
 
-        # 세션 번호 계산
-        session_num = count_sessions(old_text) + 1
-
         # frontmatter updated 필드 갱신
         new_text = re.sub(
             r"^(updated:\s*).*$",
@@ -285,6 +283,18 @@ def append_session(
             old_text,
             flags=re.MULTILINE,
         )
+
+        if realtime and count_sessions(old_text) > 0:
+            append_block = f"\n\n{content.strip()}"
+            if summary.strip():
+                append_block += f"\n\n**[추가 요약]**\n{summary.strip()}"
+            new_text = new_text.rstrip() + append_block + "\n"
+            existing.write_text(new_text, encoding="utf-8")
+            print(f"📎 마지막 세션에 실시간 내용 추가됨")
+            return str(existing)
+
+        # 세션 번호 계산
+        session_num = count_sessions(old_text) + 1
 
         # 세션 블록 구성
         session_block = f"\n---\n\n## 🗓️ 세션 {session_num} — {now_str}\n\n{content.strip()}"
@@ -338,6 +348,11 @@ def main() -> int:
         action="store_true",
         help="기존 노트에 세션을 누적 추가 (없으면 새로 생성)",
     )
+    parser.add_argument(
+        "--realtime",
+        action="store_true",
+        help="기존 노트의 마지막 세션에 내용을 실시간으로 이어서 추가",
+    )
     args = parser.parse_args()
 
     sources = (
@@ -346,7 +361,7 @@ def main() -> int:
     )
 
     try:
-        if args.append:
+        if args.append or args.realtime:
             filepath = append_session(
                 topic=args.topic,
                 content=args.content,
@@ -355,6 +370,7 @@ def main() -> int:
                 vault_path=args.vault_path,
                 sources=sources,
                 status=args.status,
+                realtime=args.realtime,
             )
         else:
             filepath = save_note(

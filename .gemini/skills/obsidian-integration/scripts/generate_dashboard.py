@@ -38,13 +38,13 @@ def load_manifests(agent_dir: Path) -> dict[str, list[dict]]:
         except Exception:
             continue
 
-        # 경로에서 카테고리 추출: parts[0] = Category (예: 0-Inbox)
+        # 경로에서 카테고리 추출: parts[0] = Category (예: Inbox)
         rel = manifest_path.relative_to(agent_dir)
         category = rel.parts[0]
 
-        # 0-Inbox의 경우 0-Inbox/Topic_Name/rag/manifest.json 구조이므로 
+        # Inbox의 경우 Inbox/Topic_Name/rag/manifest.json 구조이므로 
         # topic_name이 rel.parts[1]이 될 수 있지만, 현재 대시보드는 category별로 모음.
-        # 따라서 category 자체를 기준으로 수집하면 0-Inbox도 포함됨.
+        # 따라서 category 자체를 기준으로 수집하면 Inbox도 포함됨.
         manifest["_category"] = category
         categories.setdefault(category, []).append(manifest)
 

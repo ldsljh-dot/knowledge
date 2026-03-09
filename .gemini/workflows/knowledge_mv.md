@@ -70,7 +70,7 @@ if ($LASTEXITCODE -ne 0) {
 사용자에게 위 목록을 참고하여 다음 정보를 텍스트로 입력받으세요.
 
 1. **"이동할 대상 토픽의 식별자(Category/Topic)를 위 목록에서 복사하여 붙여넣어 주세요."**
-   예: `0-Inbox/Transformer_Architecture`
+   예: `Inbox/Transformer_Architecture`
    변수: `{SOURCE_TOPIC}`
 
 2. **"새로운 대상 카테고리(PARA 구조)를 입력하세요."**

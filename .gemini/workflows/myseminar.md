@@ -68,7 +68,7 @@ try { python -c "import rank_bm25" *>$null } catch {
    예: `홍길동`, `Jane Smith`
 
 사용자의 답변을 기반으로 `{TOPIC}`과 `{SPEAKER}` 변수를 확정합니다.
-저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `0-Inbox`로 설정합니다.
+저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `Inbox`로 설정합니다.
 
 ---
 
@@ -342,26 +342,28 @@ if ($HAS_RAG) {
 </tab>
 </tabs>
 
-### Step 3-4: 보강된 항목 생성
+### Step 3-4: 심층 해석 및 보강된 항목 생성 (Detailed Synthesis)
 
-검색 결과(또는 RAG 없을 경우 입력 그대로)를 바탕으로 항목을 생성합니다.
+사용자의 짧은 입력이나 단편적인 메모를 있는 그대로 기록하지 마십시오. RAG 검색 결과(또는 이전 컨텍스트)를 바탕으로 사용자의 의도를 전문가의 시각에서 **심층적으로 해석(Interpret)**하고, 이를 **논문 수준의 상세한 지식(Detailed Synthesis)**으로 확장하여 작성해야 합니다.
+
+**보강 작성 핵심 규칙:**
+- **심층 해석**: 사용자의 입력을 트리거로 삼아, 해당 개념이 전체 아키텍처나 이론에서 갖는 의미, 발생할 수 있는 병목, 해결책 등을 상세히 풀어씁니다.
+- **RAG 적극 활용**: 검색된 청크의 구체적인 원리, 수치, 아키텍처적 특징을 반드시 포함하여 내용을 풍성하게 만듭니다.
+- **구조화된 리포트 형식**: 단순히 1~2문장 추가가 아니라, [개념 설명] - [구조적 특징] - [시사점/한계] 등의 형태로 짜임새 있게 작성합니다.
+- Question: 질문의 표면적 의미를 넘어, 해당 질문이 제기된 학술적/기술적 배경과 그에 대한 심층적 분석을 제공.
+- Opinion/Key Point: 단편적 주장을 RAG 기반의 기술적 근거, 장단점 분석, 실제 논문 사례 등과 결합하여 완결된 형태의 지식 단위로 재작성.
+- Answer: 답변의 원리를 RAG 데이터를 통해 단계별로 상세히 증명 및 해설.
 
 **출력 형식 (각 항목):**
 
 ```
 {ENTRY_TYPE_ICON} [{ENTRY_TYPE}] {INPUT_TEXT}
 
-{RAG 보강 내용 — 관련 맥락, 배경 설명, 연관 개념}
-(RAG 없으면 생략)
+**[전문가 심층 분석 & RAG 보강]**
+{여기에 사용자의 입력을 해석하여 확장한, 전문적이고 상세한 분석 리포트 내용을 작성합니다. 여러 문단과 글머리 기호를 활용해 풍부하게 구성하세요.}
 
 📄 출처: {파일명} (score={s:.3f})  ← RAG 있을 때만
 ```
-
-**보강 작성 규칙:**
-- Question: 해당 질문이 왜 중요한지, 관련 배경 지식 1~2문장
-- Opinion: 관련 기술적 근거나 반론 가능성 언급 (중립적으로)
-- Key Point: 해당 내용의 기술적 의미나 시사점 보충
-- Answer: 답변의 정확성 여부를 RAG 기반으로 간단히 평가
 
 **세션 내 전체 항목을 `SESSION_LOG`에 누적합니다.**
 
@@ -380,7 +382,7 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
   --summary "{ENTRY_TYPE}: {INPUT_TEXT 앞 50자}" \
   --category "$CATEGORY" \
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
-  --append
+  --realtime
 ```
 
 </tab>
@@ -395,7 +397,7 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
   --summary "{ENTRY_TYPE}: {INPUT_TEXT 앞 50자}" `
   --category "$CATEGORY" `
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
-  --append
+  --realtime
 ```
 
 </tab>
@@ -473,7 +475,7 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
   --summary "세미나 완료: {N}항목 ({Q_COUNT}Q / {O_COUNT}O / {KEY_COUNT}Key), 미답 {UNANSWERED_COUNT}개" \
   --category "$CATEGORY" \
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
-  --append
+  --realtime
 ```
 
 </tab>
@@ -490,7 +492,7 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
   --summary "세미나 완료: {N}항목 ({Q_COUNT}Q / {O_COUNT}O / {KEY_COUNT}Key), 미답 {UNANSWERED_COUNT}개" `
   --category "$CATEGORY" `
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
-  --append
+  --realtime
 ```
 
 </tab>
