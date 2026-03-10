@@ -361,11 +361,19 @@ def create_source_file(
         content_section = f"## Snippet (via Tavily)\n\n{snippet}"
         source_tag = "tavily_snippet"
 
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M')
+    
+    # YAML frontmatter에서 오류가 발생하지 않도록 이스케이프 처리
+    safe_title = title.replace('"', '\\"')
+    safe_query = query.replace('"', '\\"')
+    safe_url = url.replace('"', '%22')
+
     text = f"""---
-created: {datetime.now().strftime('%Y-%m-%d %H:%M')}
-source_url: {url}
-title: "{title}"
-search_query: "{query}"
+created: {now_str}
+updated: {now_str}
+source_url: "{safe_url}"
+title: "{safe_title}"
+search_query: "{safe_query}"
 source_index: {index}
 relevance_score: {score}
 content_source: {source_tag}
@@ -390,9 +398,14 @@ def create_summary_file(output_dir: Path, query: str, answer: str) -> str:
     filename = f"{safe_query}_summary_{timestamp}.md"
     filepath = output_dir / filename
 
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M')
+    
+    safe_query = query.replace('"', '\\"')
+
     text = f"""---
-created: {datetime.now().strftime('%Y-%m-%d %H:%M')}
-search_query: "{query}"
+created: {now_str}
+updated: {now_str}
+search_query: "{safe_query}"
 category: web_research
 type: summary
 tags: [web_research, summary, auto_generated]

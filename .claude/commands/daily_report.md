@@ -1,0 +1,1 @@
+../../.gemini/workflows/daily_report.md

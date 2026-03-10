@@ -64,6 +64,7 @@ def generate_dashboard(agent_dir: Path) -> str:
     lines = [
         "---",
         "tags: [dashboard, agent]",
+        f"created: {now_iso}",
         f"updated: {now_iso}",
         "---",
         "",

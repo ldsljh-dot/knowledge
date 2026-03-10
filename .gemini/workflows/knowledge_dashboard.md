@@ -1,7 +1,11 @@
 ---
+created: 2026-03-10
+updated: 2026-03-10
 description: 수집된 RAG 토픽 현황을 카테고리별로 한눈에 보여줍니다
 trigger: /knowledge_dashboard
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 # Knowledge Dashboard Workflow
 
@@ -10,6 +14,8 @@ trigger: /knowledge_dashboard
 모든 bash 명령은 프로젝트 루트(`/home/jh/projects/knowledge`)에서 실행합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Step 1: 환경변수 로드
 

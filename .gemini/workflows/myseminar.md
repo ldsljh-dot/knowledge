@@ -1,7 +1,11 @@
 ---
+created: 2026-03-10
+updated: 2026-03-10
 description: 세미나 중 질문/의견을 실시간으로 캡처하고 RAG로 맥락을 보강하여 Obsidian에 저장하는 Hybrid 워크플로우
 trigger: /myseminar
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 # 🎙️ My Seminar Q&A Capture Workflow
 
@@ -14,6 +18,8 @@ trigger: /myseminar
 세션 종료 시 미답 질문 목록과 후속 연구 제안을 생성합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 1: 환경 설정 및 세미나 정보 입력
 
@@ -71,6 +77,8 @@ try { python -c "import rank_bm25" *>$null } catch {
 저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `Inbox`로 설정합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 2: RAG 지식 베이스 확인
 
@@ -254,6 +262,8 @@ print(','.join(dirs))
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 3: 실시간 Q&A 캡처 루프 ⭐
 
@@ -289,7 +299,9 @@ print(','.join(dirs))
 입력 내용을 분석하여 유형을 결정합니다.
 
 | 접두어 | 분류 | 아이콘 |
-|--------|------|--------|
+|---
+created: 2026-03-10
+updated: 2026-03-10-----|------|--------|
 | `[Q]` 또는 `?`로 끝남 | Question (질문) | ❓ |
 | `[O]` | Opinion (의견) | 💬 |
 | `[A]` | Answer (답변) | ✅ |
@@ -417,6 +429,8 @@ Step 3-1로 돌아가 입력을 계속 받습니다.
 종료 키워드(`종료`, `exit`, `quit`, `그만`, `끝`, `done`) 감지 시 Phase 4로 이동합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 4: 세션 요약 및 마무리
 
@@ -514,6 +528,8 @@ Obsidian에서 확인해보세요! 🎉
 ```
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## 예시 세션
 
@@ -595,6 +611,8 @@ AI: ✅ 세미나 기록 완료!
 ```
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Notes
 

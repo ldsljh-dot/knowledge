@@ -1,0 +1,1 @@
+../../.gemini/workflows/code_analyze.md

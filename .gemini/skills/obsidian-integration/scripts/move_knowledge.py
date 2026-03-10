@@ -116,6 +116,10 @@ def update_note_content(note_path: Path, new_cat: str, new_topic: str):
     if new_topic:
         content = re.sub(r"^# 📚 .*$", f"# 📚 {new_topic}", content, flags=re.MULTILINE)
 
+    # Update 'updated' field
+    now_str = get_now_str()
+    content = re.sub(r"^(updated:\s*).*$", f"\\g<1>{now_str}", content, flags=re.MULTILINE)
+
     note_path.write_text(content, encoding="utf-8")
     print("✅ Note content updated.")
 

@@ -1,7 +1,11 @@
 ---
+created: 2026-03-10
+updated: 2026-03-10
 description: knowledge_tutor로 수집된 RAG manifest를 기반으로 기존 자료에서 즉시 질문-답변하는 워크플로우
 trigger: /knowledge_query
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 # Knowledge Query Workflow
 
@@ -13,6 +17,8 @@ trigger: /knowledge_query
 BM25 RAG 검색으로 사용자 질문에 즉시 답변합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Prerequisites
 
@@ -77,6 +83,8 @@ try {
 - RAG manifest가 없으면 자동으로 `knowledge_tutor` 수집 흐름 실행
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 1: RAG Manifest 조회 및 토픽 선택
 
@@ -223,12 +231,16 @@ if len(potential) > 15:
 > **예시 출력:**
 > ```
 > Topic                                    Files  Size_KB  Updated              SafeTopic
-> ------------------------------------------------------------------------------------------
+> ---
+created: 2026-03-10
+updated: 2026-03-10---------------------------------------------------------------------------------------
 > Mamba SSM architecture                   6      185      2026-02-19T15:48:00  Mamba_SSM_architecture...
 > NVIDIA 자율주행 기술 특징과 동향            6      142      2026-02-19T16:15:00  NVIDIA__________
 > ```
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 1-2: 사용자 토픽 선택
 
@@ -240,13 +252,17 @@ if len(potential) > 15:
 #### 입력 유형별 처리
 
 | 입력 | 처리 |
-|------|------|
+|---
+created: 2026-03-10
+updated: 2026-03-10---|------|
 | `Path/to/Topic` (식별자 완전 일치) | 해당 manifest 로드 → Step 1-3 |
 | `전체` 또는 `all` | 전체 모든 manifest 합산 (Step 2-7 참조) |
 | `Topic1, Topic2` (쉼표 구분) | 해당 manifest들 병합 |
 | 목록에 **없는** 경로 | 해당 폴더에 .md 파일이 있으면 Step 1-4 (RAG 생성) |
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 1-3: Manifest에서 소스 경로 로드
 
@@ -340,6 +356,8 @@ print(f'TOPIC={m.get(\"topic\", \"\")}')
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 1-3b: 이전 학습 기록 확인 및 로드
 
@@ -435,7 +453,9 @@ else:
 **탐색 결과별 처리:**
 
 | 결과 | 처리 |
-|------|------|
+|---
+created: 2026-03-10
+updated: 2026-03-10---|------|
 | `PREV_NOTES_FOUND=true` + `CUMULATIVE_NOTE` 있음 | 종합 누적 노트를 읽어 이전 학습 이력 요약 → 표시 후 이어서 진행 |
 | `PREV_NOTES_FOUND=true` + 세션 노트만 있음 | 가장 최근 세션 노트에서 핵심 요약 추출 → 표시 후 이어서 진행 |
 | `PREV_NOTES_FOUND=false` | "이전 학습 기록 없음, 새 세션 시작" 안내 후 Phase 2 진행 |
@@ -456,6 +476,8 @@ else:
 > 세션 노트는 최신 파일 1개만 읽으면 충분하다 (중복 방지).
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 1-4: RAG 없음 — 자동 생성 흐름 실행 ⭐
 
@@ -615,6 +637,8 @@ print(','.join(dirs))
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 2: RAG Q&A 루프
 
@@ -636,6 +660,8 @@ print(','.join(dirs))
 이 제안은 Step 1-3b에서 읽은 이전 학습 기록을 분석하여 Claude가 직접 생성합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-2: RAG 청크 검색 실행
 
@@ -698,6 +724,8 @@ foreach ($dir in $DIRS) {
 > - 복잡한 종합 질문 → `--top-k 8`
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-3: RAG 신뢰도 계산
 
@@ -723,13 +751,17 @@ score_grade:
 
 **신뢰도 배지:**
 | 신뢰도 | 배지 | 의미 |
-|--------|------|------|
+|---
+created: 2026-03-10
+updated: 2026-03-10-----|------|------|
 | 80~100% | 🟢 높음 | 자료에 충분한 근거 있음 |
 | 50~79%  | 🟡 보통 | 부분적 근거, 보완 가능 |
 | 20~49%  | 🟠 낮음 | 관련 자료 부족, 추가 검색 권장 |
 | 0~19%   | 🔴 매우 낮음 | 자료 없음, 반드시 추가 검색 필요 |
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-4: 청크 기반 심층 답변 생성 (Detailed Synthesis)
 
@@ -754,10 +786,14 @@ score_grade:
 ...
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 📊 RAG 신뢰도: {배지} {신뢰도}%  ({검색된_청크_수}개 청크 참조, max_score={max_score:.3f})
 ```
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-5: 실시간 Obsidian 저장 (Realtime Save)
 
@@ -828,6 +864,8 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_das
 > 💡 **중요**: 답변을 사용자에게 제공한 후, 반드시 위 명령어를 실행하여 기록을 남기세요.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-6: 후속 안내
 
@@ -844,6 +882,8 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_das
 > **"⚡ 신뢰도가 낮습니다. '추가 검색해줘'라고 입력하면 웹에서 최신 자료를 수집합니다."**
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-7: 추가 크롤링 요청 처리
 
@@ -942,6 +982,8 @@ if ($LASTEXITCODE -ne 0) {
 3. 개선된 신뢰도로 답변을 갱신
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-8: 다중 토픽 동시 검색
 
@@ -1054,6 +1096,8 @@ foreach ($dir in $DIRS) {
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-9: 종료 감지
 
@@ -1061,6 +1105,8 @@ foreach ($dir in $DIRS) {
 - `종료`, `exit`, `quit`, `그만`, `끝`, `done`
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 3: 세션 종료 및 총괄 리포트 생성
 
@@ -1088,6 +1134,8 @@ python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian
   --content "
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 ### 📝 세션 총괄 요약 리포트
 {AI가_생성한_상세_총괄_요약_리포트_내용}
 " \
@@ -1127,7 +1175,9 @@ $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 # PowerShell의 줄바꿈을 활용하여 리포트 추가
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
   --topic "{TOPIC}" `
-  --content "`n---`n### 📝 세션 총괄 요약 리포트`n{AI가_생성한_상세_총괄_요약_리포트_내용}`n" `
+  --content "`n---
+created: 2026-03-10
+updated: 2026-03-10`n### 📝 세션 총괄 요약 리포트`n{AI가_생성한_상세_총괄_요약_리포트_내용}`n" `
   --category "Knowledge_Query" `
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
   --realtime
@@ -1149,6 +1199,8 @@ if ($LASTEXITCODE -ne 0) {
 > 💡 **중요**: 리포트는 단순한 대화 나열이 아니라, 전문가가 이번 세션에서 탐구한 주제들의 흐름을 한눈에 파악할 수 있도록 구조화된 내용이어야 합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## 예시 세션
 
@@ -1157,7 +1209,9 @@ USER: /knowledge_query
 
 AI: 등록된 RAG 목록:
     식별자 (Category/SafeTopic)                   Topic                              파일  KB    Updated
-    ---------------------------------------------------------------------------------------------------------
+    ---
+created: 2026-03-10
+updated: 2026-03-10------------------------------------------------------------------------------------------------------
     [자율주행]
       자율주행/NVIDIA__________                   NVIDIA 자율주행 기술 특징과 동향   6     142   2026-02-19
     [AI]
@@ -1215,6 +1269,8 @@ AI: 세션을 Obsidian에 저장하시겠습니까? (y/n)
 ```
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Notes
 
@@ -1226,7 +1282,9 @@ AI: 세션을 Obsidian에 저장하시겠습니까? (y/n)
 - **knowledge_tutor와의 차이**:
 
 | | `knowledge_tutor` | `knowledge_query` |
-|---|---|---|
+|---
+created: 2026-03-10
+updated: 2026-03-10|---|---|
 | 웹 검색 | ✅ Tavily + Jina | ❌ (기존 자료만) |
 | 속도 | 느림 (수집 포함) | ⚡ 빠름 (로컬 BM25) |
 | 용도 | 새 주제 학습 | 기존 자료 즉시 조회 |
