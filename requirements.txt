@@ -13,3 +13,10 @@ rank-bm25>=0.2.2
 # PDF 직접 파싱 (pdfplumber → pdfminer.six 기반)
 # PDF URL 수집 시 Jina fallback으로 사용됨
 pdfplumber>=0.10.0
+
+# Mem0 AI 장기 기억 (세션 간 문맥 유지)
+# ANTHROPIC_API_KEY 필요 (LLM 백엔드)
+mem0ai>=0.1.0
+
+# 로컬 임베딩 (Mem0 벡터 스토어용, 외부 API 불필요)
+sentence-transformers>=2.0.0

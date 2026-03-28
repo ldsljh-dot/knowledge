@@ -63,8 +63,60 @@ Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
 </tab>
 </tabs>
 
-> ⚠️ `TAVILY_API_KEY`가 없으면 워크플로우를 진행할 수 없습니다.  
+> ⚠️ `TAVILY_API_KEY`가 없으면 워크플로우를 진행할 수 없습니다.
 > `.env.example`을 복사해 `.env`를 설정하거나 환경변수를 직접 설정하세요.
+
+---
+
+## Step 0: 이전 세션 문맥 로드 (Mem0)
+
+학습 주제를 입력받은 후, Mem0에서 관련 이전 세션 이력을 검색합니다.
+`ANTHROPIC_API_KEY`가 없으면 이 단계를 건너뜁니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+  python "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" \
+    --query "{TOPIC}" \
+    --limit 3
+else
+  echo "ℹ️  ANTHROPIC_API_KEY 미설정 — 이전 세션 로드 건너뜀"
+fi
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+if ($env:ANTHROPIC_API_KEY) {
+    python "$env:AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" `
+      --query "{TOPIC}" `
+      --limit 3
+} else {
+    Write-Host "ℹ️  ANTHROPIC_API_KEY 미설정 — 이전 세션 로드 건너뜀"
+}
+```
+
+</tab>
+</tabs>
+
+결과가 있으면 사용자에게 안내합니다:
+> **"이 주제로 이전에 학습한 기록이 있습니다. 이어서 진행하시겠습니까?"**
 
 ---
 
@@ -748,6 +800,50 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
 </tabs>
 
 > 💡 **중요**: `{전체_대화_기록_QA_HISTORY}`에는 사용자와의 모든 대화 내용이 포함되어야 합니다. 요약본이 아닌 실제 대화 로그를 저장하세요.
+
+### Step 3-2b: 학습 요약 Mem0 저장
+
+Obsidian 저장 완료 후, 이번 세션 요약을 Mem0 장기 기억에도 저장합니다.
+`{UNRESOLVED}`는 튜터링 중 미해결로 표시된 질문들의 목록입니다 (없으면 "없음").
+`ANTHROPIC_API_KEY`가 없으면 이 단계를 건너뜁니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+  python "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_save.py" \
+    --content "{CATEGORY}/{TOPIC} 학습 완료. 핵심 요약: {핵심_요약_SUMMARY}. 미해결: {UNRESOLVED}" \
+    --agent "claude" \
+    --metadata "{\"workflow\": \"knowledge_tutor\", \"topic\": \"{TOPIC}\", \"category\": \"{CATEGORY}\"}"
+else
+  echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 저장 건너뜀"
+fi
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+if ($env:ANTHROPIC_API_KEY) {
+    $memContent = "{CATEGORY}/{TOPIC} 학습 완료. 핵심 요약: {핵심_요약_SUMMARY}. 미해결: {UNRESOLVED}"
+    $memMeta = '{"workflow": "knowledge_tutor", "topic": "{TOPIC}", "category": "{CATEGORY}"}'
+    python "$env:AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_save.py" `
+      --content "$memContent" `
+      --agent "claude" `
+      --metadata "$memMeta"
+} else {
+    Write-Host "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 저장 건너뜀"
+}
+```
+
+</tab>
+</tabs>
 
 ### Step 3-3: 대시보드 업데이트
 
