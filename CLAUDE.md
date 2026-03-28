@@ -32,7 +32,7 @@ Optional:
 | `/knowledge_query` | `.gemini/workflows/knowledge_query.md` | RAG Q&A over previously collected sources + Mem0 context |
 | `/knowledge_dashboard` | `.gemini/workflows/knowledge_dashboard.md` | Show collected topics overview |
 | `/knowledge_personal` | `.gemini/workflows/knowledge_personal.md` | Manage personal events/memos via SQLite (accurate, no LLM interpretation) |
-| `/knowledge_rm` | `.gemini/workflows/knowledge_rm.md` | Delete collected topics |
+| `/myseminar` | `.gemini/workflows/myseminar.md` | Real-time seminar Q&A capture → RAG enrichment → Obsidian save |
 
 **Note:** `.claude/commands/` files are symlinks to `.gemini/workflows/` — edit only `.gemini/workflows/` files. Workflow files contain both bash (Linux/macOS) and PowerShell (Windows) tab sections.
 

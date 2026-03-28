@@ -1,0 +1,1 @@
+../../.gemini/workflows/myseminar.md
