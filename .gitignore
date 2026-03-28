@@ -30,5 +30,10 @@ logs/
 *.log
 rag_output_temp.txt
 rag_result_*.txt
+
+# Personal DB (SQLite — contains personal schedule/memo data)
+*.db
+*.db-shm
+*.db-wal
 zi7r9p7p
 zihNUVEK

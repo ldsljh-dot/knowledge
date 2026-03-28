@@ -64,6 +64,55 @@ Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
 
 ---
 
+## Step 0: 이전 세션 문맥 로드 (Mem0)
+
+토픽 선택 전, Mem0에서 관련 이전 기억을 검색합니다.
+`ANTHROPIC_API_KEY`가 없으면 이 단계를 건너뜁니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+  python "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" \
+    --query "{TOPIC 또는 사용자 입력 쿼리}" \
+    --limit 3
+else
+  echo "ℹ️  ANTHROPIC_API_KEY 미설정 — 이전 세션 로드 건너뜀"
+fi
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+if ($env:ANTHROPIC_API_KEY) {
+    python "$env:AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" `
+      --query "{TOPIC 또는 사용자 입력 쿼리}" `
+      --limit 3
+} else {
+    Write-Host "ℹ️  ANTHROPIC_API_KEY 미설정 — 이전 세션 로드 건너뜀"
+}
+```
+
+</tab>
+</tabs>
+
+---
+
 ## Phase 1: RAG Manifest 조회 및 토픽 선택
 
 ### Step 1-1: 기존 RAG 목록 확인
@@ -962,6 +1011,49 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_das
 </tabs>
 
 > 💡 **중요**: 요약이 아닌 실제 사용자와의 모든 문답 로그를 `{전체_Q&A_기록_QA_HISTORY}`에 포함하여 저장하세요.
+
+### Phase 3-b: Q&A 요약 Mem0 저장
+
+Obsidian 저장 완료 후, 핵심 Q&A를 Mem0 장기 기억에도 저장합니다.
+`ANTHROPIC_API_KEY`가 없으면 이 단계를 건너뜁니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+  python "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_save.py" \
+    --content "{TOPIC} Q&A 세션. 주요 질문: {핵심_질문_목록}. 핵심 답변 요약: {핵심_포인트_SUMMARY}" \
+    --agent "claude" \
+    --metadata "{\"workflow\": \"knowledge_query\", \"topic\": \"{TOPIC}\"}"
+else
+  echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 저장 건너뜀"
+fi
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+
+if ($env:ANTHROPIC_API_KEY) {
+    $memContent = "{TOPIC} Q&A 세션. 주요 질문: {핵심_질문_목록}. 핵심 답변 요약: {핵심_포인트_SUMMARY}"
+    $memMeta = '{"workflow": "knowledge_query", "topic": "{TOPIC}"}'
+    python "$env:AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_save.py" `
+      --content "$memContent" `
+      --agent "claude" `
+      --metadata "$memMeta"
+} else {
+    Write-Host "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 저장 건너뜀"
+}
+```
+
+</tab>
+</tabs>
 
 ---
 
