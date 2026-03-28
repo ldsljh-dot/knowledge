@@ -1,7 +1,11 @@
 ---
+created: 2026-03-10
+updated: 2026-03-10
 description: 기존 지식(토픽)을 다른 카테고리로 이동하거나 이름을 변경합니다.
 trigger: /knowledge_mv
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 # Knowledge Move Workflow
 
@@ -10,6 +14,8 @@ trigger: /knowledge_mv
 > ⚠️ **주의**: 이동 작업은 파일 경로를 변경하므로, 다른 노트에서 이 토픽을 참조하는 링크가 깨질 수 있습니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 1: 이동 대상 선택
 
@@ -64,6 +70,8 @@ if ($LASTEXITCODE -ne 0) {
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 1-2: 이동 설정 입력 (대화형)
 
@@ -82,6 +90,8 @@ if ($LASTEXITCODE -ne 0) {
    변수: `{NEW_TOPIC_NAME}`
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 2: 이동 실행
 
@@ -155,6 +165,8 @@ if ($LASTEXITCODE -ne 0) {
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 3: 마무리
 

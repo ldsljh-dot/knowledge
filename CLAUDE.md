@@ -33,6 +33,7 @@ Optional:
 | `/knowledge_dashboard` | `.gemini/workflows/knowledge_dashboard.md` | Show collected topics overview |
 | `/knowledge_personal` | `.gemini/workflows/knowledge_personal.md` | Manage personal events/memos via SQLite (accurate, no LLM interpretation) |
 | `/myseminar` | `.gemini/workflows/myseminar.md` | Real-time seminar Q&A capture → RAG enrichment → Obsidian save |
+| `/code_analyze` | `.gemini/workflows/code_analyze.md` | 코드베이스 구조/아키텍처 분석 → Obsidian 문서화 |
 
 **Note:** `.claude/commands/` files are symlinks to `.gemini/workflows/` — edit only `.gemini/workflows/` files. Workflow files contain both bash (Linux/macOS) and PowerShell (Windows) tab sections.
 

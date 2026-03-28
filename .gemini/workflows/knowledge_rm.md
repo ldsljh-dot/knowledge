@@ -1,7 +1,11 @@
 ---
+created: 2026-03-10
+updated: 2026-03-10
 description: 수집된 RAG 토픽의 sources/manifest/노트를 선택적으로 삭제합니다
 trigger: /knowledge_rm
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 # Knowledge Remove Workflow
 
@@ -10,6 +14,8 @@ trigger: /knowledge_rm
 모든 bash 명령은 프로젝트 루트(`/home/jh/projects/knowledge`)에서 실행합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 1: 삭제 가능한 토픽 목록 표시
 
@@ -62,6 +68,8 @@ if ($LASTEXITCODE -ne 0) {
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 1-2: 삭제 대상 선택
 
@@ -71,12 +79,16 @@ if ($LASTEXITCODE -ne 0) {
 > 식별자(`Category/SafeTopic`)를 입력하세요. 쉼표로 구분하면 복수 선택 가능합니다."
 
 | 입력 예시 | 처리 |
-|-----------|------|
+|---
+created: 2026-03-10
+updated: 2026-03-10--------|------|
 | `Security/동형암호기술` | 해당 토픽 단건 삭제 |
 | `AI_Study/MemoryLLM_Research, DB_Research/PolarStore_Research` | 복수 토픽 삭제 |
 | `AI_Study` | 해당 카테고리 전체 삭제 |
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 2: 삭제 범위 확인 및 사용자 확인
 
@@ -134,6 +146,8 @@ if ($LASTEXITCODE -ne 0) {
 `n` 또는 입력 없으면 → 취소 메시지 출력 후 종료
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 3: 삭제 실행
 
@@ -262,6 +276,8 @@ if ($LASTEXITCODE -ne 0) {
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 4: 완료 메시지
 

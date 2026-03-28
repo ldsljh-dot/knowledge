@@ -1,7 +1,11 @@
 ---
+created: 2026-03-10
+updated: 2026-03-10
 description: AI Tutor workflow - Tavily 웹 검색 + Socratic 튜터링 + Obsidian 저장 + RAG manifest 생성
 trigger: /knowledge_tutor
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 # Knowledge Tutor Workflow
 
@@ -19,6 +23,8 @@ trigger: /knowledge_tutor
 웹 검색 없이 즉시 질문-답변을 할 수 있습니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Prerequisites
 
@@ -81,6 +87,8 @@ try {
 > `.env.example`을 복사해 `.env`를 설정하거나 환경변수를 직접 설정하세요.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Step 0: 이전 세션 문맥 로드 (Mem0)
 
@@ -147,6 +155,8 @@ if ($env:ANTHROPIC_API_KEY) {
 저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `Inbox`로 설정합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 1-2: SKILL 문서 확인 (필수)
 
@@ -172,6 +182,8 @@ Get-Content "$env:AGENT_ROOT/.gemini/skills/tavily-search/SKILL.md"
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 1-3: Tavily 검색 실행
 
@@ -246,6 +258,8 @@ if ($LASTEXITCODE -ne 0) {
 > 💡 특정 기술 주제는 `--include-domains "nvidia.com,arxiv.org,docs.nvidia.com"` 추가 권장
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 1-4: 검색 결과 확인
 
@@ -269,6 +283,8 @@ Get-ChildItem -Path "$OUTPUT_DIR" | Select-Object Name, Length, LastWriteTime
 생성된 파일 목록과 각 파일의 제목(title frontmatter)을 사용자에게 제시합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 1-5: 결과 품질 검증 및 Garbage 정리 ⚠️
 
@@ -370,6 +386,8 @@ if ($LASTEXITCODE -ne 0) {
 3. **재검색 결과를 다시 Step 1-4로 돌아가 확인**
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 1-6: RAG Manifest 생성 ⭐
 
@@ -449,6 +467,8 @@ if ($LASTEXITCODE -ne 0) {
 > - 생성/업데이트 시각 (`created`, `updated`)
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 2: 대화형 튜터링
 
@@ -460,6 +480,8 @@ if ($LASTEXITCODE -ne 0) {
 > 종료하려면 언제든 `종료` 또는 `exit`를 입력하세요."
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-2: 수집된 자료 읽기 (RAG)
 
@@ -552,6 +574,8 @@ if ($LASTEXITCODE -ne 0) {
 > 💡 **전략**: 질문이 바뀔 때마다 재검색 → 항상 현재 질문과 가장 관련된 청크만 컨텍스트에 올라감
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-3: RAG 신뢰도 계산
 
@@ -577,13 +601,17 @@ score_grade:
 
 **신뢰도 배지:**
 | 신뢰도 | 배지 | 의미 |
-|--------|------|------|
+|---
+created: 2026-03-10
+updated: 2026-03-10-----|------|------|
 | 80~100% | 🟢 높음 | 자료에 충분한 근거 있음 |
 | 50~79%  | 🟡 보통 | 부분적 근거, 보완 가능 |
 | 20~49%  | 🟠 낮음 | 관련 자료 부족, 추가 검색 권장 |
 | 0~19%   | 🔴 매우 낮음 | 자료 없음, 반드시 추가 검색 필요 |
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-4: Interactive Tutoring 루프 (심층 해석 및 지식 합성)
 
@@ -615,6 +643,8 @@ score_grade:
 📄 출처: {파일명} (chunk #{n}, score={s:.3f})
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 📊 RAG 신뢰도: {배지} {신뢰도}%  ({검색된_청크_수}개 청크 참조, max_score={max_score:.3f})
 
 🤔 {Socratic Method 기반의 심화 유도 질문}
@@ -624,6 +654,8 @@ score_grade:
 > **"⚡ 신뢰도가 낮습니다. '추가 검색해줘'라고 입력하면 웹에서 최신 자료를 수집합니다."**
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-5: 실시간 Obsidian 저장 (Realtime Save)
 
@@ -686,6 +718,8 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
 > 💡 **중요**: 답변을 사용자에게 제공한 후, 반드시 위 명령어를 실행하여 기록을 남기세요.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-6: 추가 크롤링 요청 처리
 
@@ -783,6 +817,8 @@ if ($LASTEXITCODE -ne 0) {
    ```
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-7: 실시간 자동 추가 검색 (범위 초과 시)
 
@@ -861,6 +897,8 @@ if ($LASTEXITCODE -ne 0) {
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ### Step 2-8: 종료 감지
 
@@ -868,6 +906,8 @@ if ($LASTEXITCODE -ne 0) {
 - `종료`, `exit`, `quit`, `그만`, `끝`, `done`
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 3: 세션 종료 및 총괄 리포트 생성
 
@@ -895,6 +935,8 @@ python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian
   --content "
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 ### 📝 세션 총괄 요약 리포트
 {AI가_생성한_상세_총괄_요약_리포트_내용}
 " \
@@ -924,7 +966,9 @@ $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 # PowerShell의 줄바꿈을 활용하여 리포트 추가
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
   --topic "{TOPIC}" `
-  --content "`n---`n### 📝 세션 총괄 요약 리포트`n{AI가_생성한_상세_총괄_요약_리포트_내용}`n" `
+  --content "`n---
+created: 2026-03-10
+updated: 2026-03-10`n### 📝 세션 총괄 요약 리포트`n{AI가_생성한_상세_총괄_요약_리포트_내용}`n" `
   --category "Knowledge_Tutor" `
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
   --realtime
@@ -997,6 +1041,8 @@ Obsidian에서 확인해보세요! 🎉
 ```
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Notes
 

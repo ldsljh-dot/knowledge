@@ -1,13 +1,19 @@
 ---
+created: 2026-03-10
+updated: 2026-03-10
 description: [Robust] 세미나/메모를 입력받아 표준 RAG({Category})를 구축하고 내용을 누적 저장하는 무한 루프 워크플로우
 trigger: /seminar
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 # 🎙️ Seminar & Knowledge Capture Workflow (Robust)
 
 이 워크플로우는 사용자의 메모를 입력받아 **표준 지식 베이스 구조**(`{Category}/{Topic}`)에 안전하게 저장합니다. 지식이 없으면 자동으로 수집하고, 있으면 즉시 활용합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 1: 환경 설정 및 초기화
 
@@ -39,6 +45,8 @@ python3 -c "import tavily, rank_bm25" 2>/dev/null || { echo "📦 Installing dep
 저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `Inbox`로 설정합니다.
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 2: 지식 베이스(RAG) 무결성 검사
 
@@ -108,6 +116,8 @@ fi
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 3: 실시간 메모 루프 (Interaction Loop) ⭐
 
@@ -174,6 +184,8 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
 </tabs>
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Phase 4: 안전 종료
 
@@ -183,6 +195,8 @@ echo "📁 파일 위치: $AGENT_DIR/$SAFE_CATEGORY"
 ```
 
 ---
+created: 2026-03-10
+updated: 2026-03-10
 
 ## Notes
 - **Robustness**: 파일 경로의 특수문자를 자동으로 처리(`SAFE_TOPIC`)하여 OS 오류를 방지합니다.
