@@ -1,1 +1,0 @@
-../../.gemini/workflows/knowledge_rm.md

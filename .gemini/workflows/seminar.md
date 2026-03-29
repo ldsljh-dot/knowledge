@@ -187,25 +187,12 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
 created: 2026-03-10
 updated: 2026-03-10
 
-## Phase 4: 안전 종료 및 대시보드 갱신
-
-세션 종료 시 전체 현황을 동기화합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
+## Phase 4: 안전 종료
 
 ```bash
-echo "📊 대시보드를 업데이트합니다..."
-python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/generate_dashboard.py" \
-  --agent-dir "$AGENT_DIR" \
-  --output "$AGENT_DIR/_Dashboard.md"
-
 echo "✅ 모든 세션 기록이 안전하게 저장되었습니다."
 echo "📁 파일 위치: $AGENT_DIR/$SAFE_CATEGORY"
 ```
-
-</tab>
-</tabs>
 
 ---
 created: 2026-03-10
