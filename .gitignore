@@ -1,5 +1,5 @@
 # Environment Variables
-.env
+# .env (git-crypt로 암호화)
 .env.local
 
 # Python
