@@ -23,7 +23,7 @@ try:
     _p = _here.parent
     for _ in range(6):
         if (_p / ".env").exists():
-            load_dotenv(_p / ".env")
+            load_dotenv(_p / ".env", override=True)
             break
         _p = _p.parent
 except ImportError:

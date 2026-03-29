@@ -4,7 +4,7 @@ Personal DB - Events Manager
 일정(events)을 SQLite DB에 저장·조회·수정·삭제합니다.
 LLM이 직접 읽는 대신 이 스크립트를 통해 정확한 결과를 얻습니다.
 
-DB 위치: $OBSIDIAN_VAULT_PATH/Agent/personal.db
+DB 위치: $OBSIDIAN_VAULT_PATH/4-Archieve/db/personal.db
 
 Usage:
     # 일정 추가
@@ -54,7 +54,7 @@ def _get_db_path(db_path_arg: str = None) -> Path:
         return Path(db_path_arg)
     vault = os.getenv("OBSIDIAN_VAULT_PATH")
     if vault:
-        return Path(vault) / "Agent" / "personal.db"
+        return Path(vault) / "4-Archieve" / "db" / "personal.db"
     raise EnvironmentError(
         "DB 경로를 찾을 수 없습니다. --db-path 또는 OBSIDIAN_VAULT_PATH 환경변수를 설정하세요."
     )
@@ -286,7 +286,7 @@ def main():
         description="Personal DB - 일정(Events) 관리",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--db-path", help="SQLite DB 파일 경로 (기본: $OBSIDIAN_VAULT_PATH/Agent/personal.db)")
+    parser.add_argument("--db-path", help="SQLite DB 파일 경로 (기본: $OBSIDIAN_VAULT_PATH/4-Archieve/db/personal.db)")
 
     sub = parser.add_subparsers(dest="command", required=True)
 

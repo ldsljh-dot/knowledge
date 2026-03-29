@@ -101,6 +101,17 @@ python .gemini/skills/personal-db/scripts/manage_memos.py add \
 # 메모 검색
 python .gemini/skills/personal-db/scripts/manage_memos.py search \
   --keyword "회의록"
+
+# 태스크 추가
+python .gemini/skills/personal-db/scripts/manage_tasks.py add \
+  --title "보고서 작성" --priority high --due "2026-04-01T18:00" \
+  --tags '["work"]' --source "user"
+
+# 태스크 목록 (기본: todo + in_progress)
+python .gemini/skills/personal-db/scripts/manage_tasks.py list
+
+# 태스크 완료 처리
+python .gemini/skills/personal-db/scripts/manage_tasks.py done --id "abc-123"
 ```
 DB stored at: `$OBSIDIAN_VAULT_PATH/Agent/personal.db` (shared across all agents)
 Uses SQLite WAL mode for concurrent access safety. LLMs never read raw DB — always use these scripts.
