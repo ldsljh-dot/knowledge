@@ -90,7 +90,7 @@ try {
 created: 2026-03-10
 updated: 2026-03-10
 
-## Step 0: 이전 세션 문맥 로드 (Mem0)
+## Step 0: 이전 세션 문맥 로드 (Mem0) + 추가 학습 여부 결정
 
 학습 주제를 입력받은 후, Mem0에서 관련 이전 세션 이력을 검색합니다.
 `ANTHROPIC_API_KEY`가 없으면 이 단계를 건너뜁니다.
@@ -105,7 +105,7 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 if [ -n "$ANTHROPIC_API_KEY" ]; then
   python "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" \
     --query "{TOPIC}" \
-    --limit 3
+    --limit 5
 else
   echo "ℹ️  ANTHROPIC_API_KEY 미설정 — 이전 세션 로드 건너뜀"
 fi
@@ -128,7 +128,7 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 if ($env:ANTHROPIC_API_KEY) {
     python "$env:AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" `
       --query "{TOPIC}" `
-      --limit 3
+      --limit 5
 } else {
     Write-Host "ℹ️  ANTHROPIC_API_KEY 미설정 — 이전 세션 로드 건너뜀"
 }
@@ -137,22 +137,176 @@ if ($env:ANTHROPIC_API_KEY) {
 </tab>
 </tabs>
 
-결과가 있으면 사용자에게 안내합니다:
-> **"이 주제로 이전에 학습한 기록이 있습니다. 이어서 진행하시겠습니까?"**
+### 결과에 따른 분기
+
+**이전 기억이 있는 경우** — 검색된 기억을 번호 목록으로 사용자에게 제시합니다:
+
+> **"이 주제와 관련된 이전 학습 기록이 있습니다:**
+>
+> 1. {기억_내용_1} (관련도: {score_1})
+> 2. {기억_내용_2} (관련도: {score_2})
+> ...
+>
+> **추가로 웹에서 최신 자료를 검색하시겠습니까?**
+> - `예` / `yes` → Step 1-1부터 정상 진행 (Tavily 웹 검색 후 기존 지식과 합산)
+> - `아니오` / `no` → 웹 검색 없이 기존 자료로 튜터링"
+
+**`예` 선택 시:** Phase 1 Step 1-1부터 정상 진행
+
+**`아니오` 선택 시:** 아래 절차를 순서대로 수행
+1. Step 1-1로 이동하여 PARA 폴더 트리 출력 + vault_search로 유사 폴더 탐색
+2. 유사 폴더가 발견된 경우:
+   - 해당 폴더의 `sources/` 경로를 `OUTPUT_DIR`로 설정
+   - Step 1-6으로 건너뛰어 RAG Manifest를 생성 (기존 sources/ 기반)
+   - Phase 2 튜터링 시작 — RAG 소스: 기존 sources/ 파일들
+3. 유사 폴더가 없는 경우:
+   - Mem0 기억 내용을 LLM 컨텍스트로 유지한 채 Phase 2 진입
+   - Phase 2의 RAG 검색(Step 2-2) 대신 Mem0 기억을 참고 자료로 사용하여 답변 생성
+   - 답변 시 "📋 참고: Mem0 기억 기반 답변입니다 (RAG 자료 없음)" 표시
+
+**이전 기억이 없는 경우:**
+
+> **"관련 이전 학습 기록이 없습니다. Tavily 웹 검색으로 새 자료를 수집합니다."**
+> → Phase 1 Step 1-1부터 정상 진행
 
 ---
 
 ## Phase 1: 정보 수집
 
-### Step 1-1: 학습 주제 입력받기
+### Step 1-1: 학습 주제 입력 및 저장 위치 결정
 
-사용자에게 다음을 질문합니다:
+사용자에게 학습 주제를 질문합니다:
 
 **"어떤 주제를 학습하시겠습니까?"**
 예: `PyTorch autograd 동작 원리`, `CXL memory pooling`, `NVBit 메모리 추적`
 
 사용자의 답변을 `{TOPIC}` 변수에 저장합니다.
-저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `Inbox`로 설정합니다.
+
+다음으로 PARA 폴더 구조를 출력합니다:
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+
+echo "=== PARA 지식 구조 ==="
+for para in "1-Projects" "2-Areas" "3-Resources"; do
+  echo ""
+  echo "[$para]"
+  find "$OBSIDIAN_VAULT_PATH/$para" -mindepth 1 -maxdepth 2 -type d -not -path "*/.*" \
+    | sed "s|$OBSIDIAN_VAULT_PATH/||" | sort
+done
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (Test-Path .env) {
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^\s*[^#\s]+=.*$") {
+            $name, $value = $_.Split('=', 2)
+            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+        }
+    }
+}
+
+foreach ($para in @("1-Projects", "2-Areas", "3-Resources")) {
+    Write-Host "`n[$para]"
+    Get-ChildItem "$env:OBSIDIAN_VAULT_PATH/$para" -Recurse -Depth 2 -Directory -ErrorAction SilentlyContinue |
+        ForEach-Object { $_.FullName -replace [regex]::Escape("$env:OBSIDIAN_VAULT_PATH/"), "" } | Sort-Object
+}
+```
+
+</tab>
+</tabs>
+
+폴더 목록 출력과 함께, **Vault Index로 의미적으로 유사한 기존 폴더를 검색**합니다:
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_search.py" \
+  --query "{TOPIC}" \
+  --top-k 5 \
+  --threshold 0.25
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+python "$env:AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_search.py" `
+  --query "{TOPIC}" `
+  --top-k 5 `
+  --threshold 0.25
+```
+
+</tab>
+</tabs>
+
+vault_search.py 출력 형식은 다음과 같습니다 (score는 0~1 코사인 유사도):
+```
+🔍 관련 지식 (쿼리: "...")
+  1. [████░░░░░░] 42%  🗂  Areas
+     📂 2-Areas/LLM/Memory/AI_Agent_Memory_Survey
+  2. [███░░░░░░░] 38%  🗂  Areas
+     📂 2-Areas/LLM/Memory/mem0
+```
+
+검색 결과를 파싱하여 **저장 위치 추천 경로**를 다음 규칙으로 결정합니다:
+
+| 조건 | 추천 경로 결정 방법 |
+|------|-------------------|
+| 1위 score ≥ 0.75 (75%) | 해당 폴더와 **동일한 상위 폴더** 사용. 예: `2-Areas/LLM/Memory/mem0` → `2-Areas/LLM/Memory` |
+| 1위 score 0.40~0.74 | 해당 폴더의 상위 폴더를 참고하되, **토픽명으로 새 하위 폴더** 생성. 예: `2-Areas/LLM/Memory/{SAFE_TOPIC}` |
+| 1위 score < 0.40 또는 결과 없음 | PARA 폴더 구조와 토픽 키워드를 LLM이 직접 분석하여 적합한 경로 추천 |
+
+**추천 경로 예시 (토픽: "장기기억 메모리"):**
+- vault_search 1위: `2-Areas/LLM/Memory/AI_Agent_Memory_Survey` (42%)
+- 규칙 적용: score 0.40~0.74 → `2-Areas/LLM/Memory/장기기억_메모리`
+- 추천: `2-Areas/LLM/Memory`
+
+사용자에게 다음과 같이 제시합니다:
+
+> **"🔍 유사한 기존 지식:**
+> 1. [42%] 📂 2-Areas/LLM/Memory/AI_Agent_Memory_Survey
+> 2. [38%] 📂 2-Areas/LLM/Memory/mem0
+>
+> ⚠️ **유사도 75% 이상 폴더 있을 경우 중복 가능성 안내** (현재: 해당 없음)
+>
+> **저장 위치 추천: `2-Areas/LLM/Memory`**
+> 다른 위치를 원하시면 경로를 직접 입력하세요. (Enter: 추천 경로 사용)
+> 새 경로 입력 시 자동으로 폴더가 생성됩니다."**
+
+사용자가 확인하거나 입력한 경로를 `{CATEGORY}` 변수에 저장합니다.
+예: `2-Areas/LLM/Models`, `3-Resources/Compiler`, `1-Projects/xPU-Emulator`
+
+> ⚠️ `{CATEGORY}`는 토픽 폴더의 **상위 경로**입니다. 실제 파일 저장 경로는 `$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/` 입니다.
+
+새 경로인 경우 폴더를 생성합니다:
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+mkdir -p "$OBSIDIAN_VAULT_PATH/{CATEGORY}"
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:OBSIDIAN_VAULT_PATH/{CATEGORY}" | Out-Null
+```
+
+</tab>
+</tabs>
 
 ---
 created: 2026-03-10
@@ -196,12 +350,10 @@ if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH"
-OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+OUTPUT_DIR="$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources"
 
 # 검색 실행
-python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
+python3 "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --query "{TOPIC}" \
   --output-dir "$OUTPUT_DIR" \
   --max-results 5 \
@@ -232,9 +384,7 @@ if (Test-Path .env) {
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+$OUTPUT_DIR = "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources"
 
 # 검색 실행
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
@@ -328,11 +478,9 @@ Remove-Item -Recurse -Force "$OUTPUT_DIR"
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_TOPIC=$(echo "{REFINED_TOPIC}" | tr ' /' '_')
-SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH"
-OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+OUTPUT_DIR="$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources"
 
-python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
+python3 "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --query "{REFINED_TOPIC}" \
   --output-dir "$OUTPUT_DIR" \
   --max-results 5 \
@@ -355,9 +503,7 @@ fi
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_TOPIC = "{REFINED_TOPIC}" -replace '[ /]', '_'
-$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
+$OUTPUT_DIR = "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources"
 
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
   --query "{REFINED_TOPIC}" `
@@ -403,12 +549,10 @@ if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH"
-SOURCES_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
-RAG_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
+SOURCES_DIR="$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources"
+RAG_DIR="$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/rag"
 
-python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
+python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --topic "{TOPIC}" \
   --sources-dir "$SOURCES_DIR" \
   --output-dir "$RAG_DIR" \
@@ -437,10 +581,8 @@ if (Test-Path .env) {
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-$SOURCES_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
-$RAG_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
+$SOURCES_DIR = "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources"
+$RAG_DIR = "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/rag"
 
 python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
   --topic "{TOPIC}" `
@@ -495,7 +637,7 @@ updated: 2026-03-10
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
+python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
   --query "{TOPIC} 핵심 개념 아키텍처 특징" \
   --sources-dir "$OUTPUT_DIR" \
   --top-k 7 \
@@ -538,7 +680,7 @@ if ($LASTEXITCODE -ne 0) {
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
+python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
   --query "{USER_QUESTION}" \
   --sources-dir "$OUTPUT_DIR" \
   --top-k 5 \
@@ -623,7 +765,9 @@ updated: 2026-03-10
    - 사용자의 질문이나 단편적인 키워드를 표면적으로만 대답하지 마십시오.
    - 검색된 RAG 데이터를 바탕으로 그 이면의 아키텍처적, 수학적, 기술적 원리와 병목, 시사점 등을 상세히 구조화하여 설명합니다. (예: [원리 설명] - [구조적 특징] - [한계 및 해결책])
 2. **Socratic Method 연계**
-   - 방대하고 깊이 있는 지식을 전달한 후, 사용자가 제대로 이해했는지 또는 한 단계 더 깊은 사고를 유도하기 위한 날카로운 확인 질문을 마지막에 제시합니다.
+   - 방대하고 깊이 있는 지식을 전달한 후, 유도 질문을 마지막에 제시합니다.
+   - 유도 질문 난이도 기준: 방금 설명한 개념에서 한 단계 더 나아가는 수준 (예: "왜 이 방식이 기존 방식보다 효율적인지 수식으로 설명할 수 있나요?")
+   - **미해결 판단**: 사용자가 답변을 못하거나 "모르겠다", "이해 안 된다"고 하면 해당 질문을 `{UNRESOLVED}` 목록에 추가합니다. `{UNRESOLVED}`는 세션 종료(Phase 3) 시 Mem0에 저장됩니다.
 3. **정확성과 출처 명시**
    - 수집된 자료에 근거해 학술적/기술적으로 정확하게 답변합니다.
    - 불확실한 내용은 "추가 검색이 필요합니다"라고 명시합니다.
@@ -662,6 +806,11 @@ updated: 2026-03-10
 답변을 출력한 직후, 사용자의 질문과 방금 생성한 답변 내용을 Obsidian에 실시간으로 기록합니다.
 `--realtime` 플래그를 사용하여 마지막 세션에 내용을 이어서 추가합니다.
 
+**저장 범위:** `--content`에 포함할 내용은 다음과 같습니다:
+- `**Q:** {사용자가 입력한 질문 그대로}`
+- `**A:** {전문가 심층 분석 리포트 전체 텍스트}` (신뢰도 배지, 출처, Socratic 질문 포함)
+- 세션 노트 파일: `$OBSIDIAN_VAULT_PATH/{CATEGORY}/{SAFE_TOPIC}/Knowledge_Tutor/{오늘_날짜}_{TOPIC}.md`
+
 <tabs>
 <tab label="Linux/macOS (Bash)">
 
@@ -670,18 +819,16 @@ updated: 2026-03-10
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
 # --realtime 플래그: 현재 세션 블록에 질문/답변 이어서 추가
-python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
+python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
   --topic "{TOPIC}" \
   --content "**Q:** {방금_사용자가_입력한_질문}
 
 **A:** {방금_생성한_답변_내용_전체}" \
   --category "Knowledge_Tutor" \
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
+  --vault-path "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC" \
   --realtime
 
 ```
@@ -700,15 +847,13 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
-$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
   --topic "{TOPIC}" `
   --content "**Q:** {방금_사용자가_입력한_질문}`n`n**A:** {방금_생성한_답변_내용_전체}" `
   --category "Knowledge_Tutor" `
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
+  --vault-path "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC" `
   --realtime
 ```
 
@@ -721,7 +866,67 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
 created: 2026-03-10
 updated: 2026-03-10
 
-### Step 2-6: 추가 크롤링 요청 처리
+### Step 2-6: 자동 추가 검색 (신뢰도 낮을 때)
+
+Step 2-5 저장 직후, RAG 신뢰도를 확인합니다:
+- **신뢰도 < 20% (🔴)**: 사용자에게 묻지 않고 자동으로 아래 검색 실행
+- **신뢰도 ≥ 20%**: 이 단계 건너뜀 → Step 2-7로
+
+**자동 실행 조건 충족 시 흐름:**
+> "⚡ 신뢰도가 너무 낮아 자동으로 추가 자료를 검색합니다..."
+
+검색 쿼리: 현재 사용자 질문(`{USER_QUESTION}`)의 핵심 키워드를 영어로 변환하여 사용
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
+
+python3 "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
+  --query "{USER_QUESTION의_영어_핵심_키워드}" \
+  --output-dir "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources" \
+  --max-results 3
+
+python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
+  --topic "{TOPIC}" \
+  --sources-dir "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources" \
+  --output-dir "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/rag" \
+  --vault-path "$OBSIDIAN_VAULT_PATH" \
+  --category "{CATEGORY}"
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
+
+python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
+  --query "{USER_QUESTION의_영어_핵심_키워드}" `
+  --output-dir "$env:OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources" `
+  --max-results 3
+
+python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
+  --topic "{TOPIC}" `
+  --sources-dir "$env:OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources" `
+  --output-dir "$env:OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/rag" `
+  --vault-path "$env:OBSIDIAN_VAULT_PATH" `
+  --category "{CATEGORY}"
+```
+
+</tab>
+</tabs>
+
+검색 완료 후 Step 2-2-b로 돌아가 동일 질문으로 RAG 재검색합니다.
+
+---
+
+### Step 2-7: 사용자 요청 추가 크롤링
 
 사용자가 다음 키워드를 입력하면 추가 웹 크롤링을 실행합니다:
 - `추가 검색`, `더 찾아봐`, `크롤링해줘`, `웹 검색`, `자료 추가`, `검색 보강`, `search more`
@@ -736,12 +941,10 @@ if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH"
-OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
-RAG_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
+OUTPUT_DIR="$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources"
+RAG_DIR="$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/rag"
 
-python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
+python3 "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --query "{현재_질문_또는_TOPIC}" \
   --output-dir "$OUTPUT_DIR" \
   --max-results 3 \
@@ -750,7 +953,7 @@ python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
   --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" \
   --min-content-length 300
 
-python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
+python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --topic "{TOPIC}" \
   --sources-dir "$OUTPUT_DIR" \
   --output-dir "$RAG_DIR" \
@@ -778,10 +981,8 @@ if (Test-Path .env) {
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
-$RAG_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
+$OUTPUT_DIR = "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/sources"
+$RAG_DIR = "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC/rag"
 
 python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
   --query "{현재_질문_또는_TOPIC}" `
@@ -820,86 +1021,6 @@ if ($LASTEXITCODE -ne 0) {
 created: 2026-03-10
 updated: 2026-03-10
 
-### Step 2-7: 실시간 자동 추가 검색 (범위 초과 시)
-
-사용자 질문이 수집된 자료 범위를 벗어나거나 신뢰도가 자동으로 낮게 측정되면 (신뢰도 < 20%):
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
-```bash
-if [ -f .env ]; then set -a; source .env; set +a; fi
-if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
-
-SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH"
-OUTPUT_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
-RAG_DIR="$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
-
-python "$AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" \
-  --query "{사용자_질문_키워드}" \
-  --output-dir "$OUTPUT_DIR" \
-  --max-results 3
-
-# 추가 수집 후 manifest도 업데이트
-python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
-  --topic "{TOPIC}" \
-  --sources-dir "$OUTPUT_DIR" \
-  --output-dir "$RAG_DIR" \
-  --vault-path "$OBSIDIAN_VAULT_PATH"
-
-if [ $? -ne 0 ]; then
-  echo "❌ 수집 후 Manifest 업데이트 중 오류가 발생했습니다."
-  exit 1
-fi
-```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-$OUTPUT_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
-$RAG_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag"
-
-python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
-  --query "{사용자_질문_키워드}" `
-  --output-dir "$OUTPUT_DIR" `
-  --max-results 3
-
-# 추가 수집 후 manifest도 업데이트
-python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
-  --topic "{TOPIC}" `
-  --sources-dir "$OUTPUT_DIR" `
-  --output-dir "$RAG_DIR" `
-  --vault-path "$env:OBSIDIAN_VAULT_PATH"
-
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "❌ 수집 후 Manifest 업데이트 중 오류가 발생했습니다."
-  exit 1
-}
-```
-
-</tab>
-</tabs>
-
----
-created: 2026-03-10
-updated: 2026-03-10
-
 ### Step 2-8: 종료 감지
 
 사용자가 다음 중 하나를 입력하면 Phase 3으로 이동:
@@ -925,12 +1046,10 @@ updated: 2026-03-10
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
 # --realtime 플래그를 통해 총괄 리포트를 파일의 맨 마지막에 추가
-python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
+python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
   --topic "{TOPIC}" \
   --content "
 
@@ -941,7 +1060,7 @@ updated: 2026-03-10
 {AI가_생성한_상세_총괄_요약_리포트_내용}
 " \
   --category "Knowledge_Tutor" \
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
+  --vault-path "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC" \
   --realtime
 ```
 
@@ -959,9 +1078,7 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
-$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 
 # PowerShell의 줄바꿈을 활용하여 리포트 추가
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
@@ -970,7 +1087,7 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
 created: 2026-03-10
 updated: 2026-03-10`n### 📝 세션 총괄 요약 리포트`n{AI가_생성한_상세_총괄_요약_리포트_내용}`n" `
   --category "Knowledge_Tutor" `
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
+  --vault-path "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC" `
   --realtime
 ```
 
@@ -1023,7 +1140,32 @@ if ($env:ANTHROPIC_API_KEY) {
 </tab>
 </tabs>
 
-### Step 3-3: 완료 메시지
+### Step 3-3: Vault Index 자동 갱신
+
+새 지식이 저장되었으므로 Vault Index를 갱신합니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py"
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+python "$env:AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py"
+```
+
+</tab>
+</tabs>
+
+### Step 3-4: 완료 메시지
 
 ```
 ✅ 학습을 완료했습니다!

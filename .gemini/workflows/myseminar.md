@@ -324,14 +324,33 @@ updated: 2026-03-10-----|------|--------|
 
 ```bash
 if [ "$HAS_RAG" = "true" ]; then
+    # 1. 단일 소스 디렉토리 (SOURCE_DIRS가 쉼표로 구분된 문자열일 경우 처리)
     IFS=',' read -ra DIRS <<< "$SOURCE_DIRS"
     for dir in "${DIRS[@]}"; do
+        echo "=== 🗂️ Obsidian RAG 검색: [$dir] ==="
         python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
           --query "{INPUT_TEXT}" \
           --sources-dir "$dir" \
           --top-k 3 \
           --chunk-size 800
     done
+fi
+
+# 2. Vault 지식 그래프 (Multi-hop 연계 검색)
+echo "=== 🕸️ Vault 지식 그래프(Multi-hop) 연계 검색 ==="
+python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_search.py" \
+  --query "{INPUT_TEXT}" \
+  --top-k 3 \
+  --threshold 0.3
+
+# 3. Mem0 동적 기억 하이브리드 검색
+echo "=== 🧠 Mem0 동적 기억 하이브리드 검색 ==="
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+  python3 "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" \
+    --query "{INPUT_TEXT}" \
+    --limit 3
+else
+  echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 하이브리드 검색 건너뜀"
 fi
 ```
 
@@ -340,14 +359,33 @@ fi
 
 ```powershell
 if ($HAS_RAG) {
+    # 1. 단일 소스 디렉토리 (SOURCE_DIRS가 쉼표로 구분된 문자열일 경우 처리)
     $DIRS = $SOURCE_DIRS -split ','
     foreach ($dir in $DIRS) {
+        Write-Host "=== 🗂️ Obsidian RAG 검색: [$dir] ==="
         python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" `
           --query "{INPUT_TEXT}" `
           --sources-dir "$dir" `
           --top-k 3 `
           --chunk-size 800
     }
+}
+
+# 2. Vault 지식 그래프 (Multi-hop 연계 검색)
+Write-Host "=== 🕸️ Vault 지식 그래프(Multi-hop) 연계 검색 ==="
+python "$env:AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_search.py" `
+  --query "{INPUT_TEXT}" `
+  --top-k 3 `
+  --threshold 0.3
+
+# 3. Mem0 동적 기억 하이브리드 검색
+Write-Host "=== 🧠 Mem0 동적 기억 하이브리드 검색 ==="
+if ($env:ANTHROPIC_API_KEY) {
+    python "$env:AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" `
+      --query "{INPUT_TEXT}" `
+      --limit 3
+} else {
+    Write-Host "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 하이브리드 검색 건너뜀"
 }
 ```
 

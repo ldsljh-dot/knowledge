@@ -137,12 +137,30 @@ updated: 2026-03-10
 ```bash
 # 입력 텍스트가 '종료' 관련이면 스크립트에서 처리하지 않음 (Agent 레벨에서 루프 탈출)
 
-# RAG 검색 (입력 내용이 질문이 아니더라도 관련 맥락을 찾음)
+# 1. Obsidian RAG 검색 (입력 내용이 질문이 아니더라도 관련 맥락을 찾음)
+echo "=== 🗂️ Obsidian RAG 검색 ==="
 python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
   --query "{INPUT_TEXT}" \
   --sources-dir "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources" \
   --top-k 3 \
   --chunk-size 600
+
+# 2. Vault 지식 그래프 (Multi-hop 연계 검색)
+echo "=== 🕸️ Vault 지식 그래프(Multi-hop) 연계 검색 ==="
+python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_search.py" \
+  --query "{INPUT_TEXT}" \
+  --top-k 3 \
+  --threshold 0.3
+
+# 3. Mem0 동적 기억 하이브리드 검색
+echo "=== 🧠 Mem0 동적 기억 하이브리드 검색 ==="
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+  python3 "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" \
+    --query "{INPUT_TEXT}" \
+    --limit 3
+else
+  echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 하이브리드 검색 건너뜀"
+fi
 ```
 
 </tab>

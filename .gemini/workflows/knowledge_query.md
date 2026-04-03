@@ -86,10 +86,11 @@ try {
 created: 2026-03-10
 updated: 2026-03-10
 
-## Step 0: 이전 세션 문맥 로드 (Mem0)
+## Step 0: 문맥 로드 (Vault Index + Mem0)
 
-토픽 선택 전, Mem0에서 관련 이전 기억을 검색합니다.
-`ANTHROPIC_API_KEY`가 없으면 이 단계를 건너뜁니다.
+토픽 선택 전, 두 가지 소스에서 관련 기존 지식을 검색합니다.
+
+### Step 0-1: Vault Index 의미 검색
 
 <tabs>
 <tab label="Linux/macOS (Bash)">
@@ -98,13 +99,10 @@ updated: 2026-03-10
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-if [ -n "$ANTHROPIC_API_KEY" ]; then
-  python "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" \
-    --query "{TOPIC 또는 사용자 입력 쿼리}" \
-    --limit 3
-else
-  echo "ℹ️  ANTHROPIC_API_KEY 미설정 — 이전 세션 로드 건너뜀"
-fi
+python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_search.py" \
+  --query "{TOPIC 또는 사용자 입력 쿼리}" \
+  --top-k 5 \
+  --threshold 0.25
 ```
 
 </tab>
@@ -121,6 +119,63 @@ if (Test-Path .env) {
 }
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
+python "$env:AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_search.py" `
+  --query "{TOPIC 또는 사용자 입력 쿼리}" `
+  --top-k 5 `
+  --threshold 0.25
+```
+
+</tab>
+</tabs>
+
+검색 결과를 사용자에게 제시합니다:
+
+> **"🔍 관련 기존 지식:**
+> 1. [85%] 📂 2-Areas/LLM/Memory/AI_Agent_Memory_Survey
+> 2. [72%] 📂 2-Areas/LLM/Memory/mem0
+>
+> 이 폴더들의 RAG도 함께 참고하시겠습니까? (yes/no)"**
+
+`yes` 선택 시: 해당 폴더들의 `sources/` 경로를 목록으로 기억해 둡니다.
+Phase 2 Step 2-2의 RAG 검색 시 `--sources-dir` 인수에 메인 토픽 sources 경로와 함께 추가 경로들을 반복 실행하여 결과를 합산합니다.
+
+예시 (메인: `2-Areas/LLM/Memory/LMCache/sources`, 추가: `2-Areas/LLM/Memory/mem0/sources`):
+```bash
+# 메인 소스 검색
+python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
+  --query "{USER_QUESTION}" \
+  --sources-dir "$OBSIDIAN_VAULT_PATH/2-Areas/LLM/Memory/LMCache/sources" \
+  --top-k 5
+
+# 추가 소스 검색 (yes 선택한 각 폴더마다 반복)
+python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
+  --query "{USER_QUESTION}" \
+  --sources-dir "$OBSIDIAN_VAULT_PATH/2-Areas/LLM/Memory/mem0/sources" \
+  --top-k 3
+```
+두 결과를 합쳐 score 기준으로 정렬 후 상위 청크를 답변에 활용합니다.
+
+### Step 0-2: Mem0 이전 기억 검색
+
+`ANTHROPIC_API_KEY`가 없으면 건너뜁니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+  python3 "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" \
+    --query "{TOPIC 또는 사용자 입력 쿼리}" \
+    --limit 3
+else
+  echo "ℹ️  ANTHROPIC_API_KEY 미설정 — 이전 세션 로드 건너뜀"
+fi
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
 if ($env:ANTHROPIC_API_KEY) {
     python "$env:AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" `
       --query "{TOPIC 또는 사용자 입력 쿼리}" `
@@ -706,7 +761,7 @@ updated: 2026-03-10
   - [이전 학습 키워드와 연관된 심화 질문]
 ```
 
-이 제안은 Step 1-3b에서 읽은 이전 학습 기록을 분석하여 Claude가 직접 생성합니다.
+이 제안은 Step 1-3b에서 읽은 이전 학습 기록을 분석하여 LLM이 직접 생성합니다. Step 1-3b에서 로드한 파일 내용을 기반으로 "아직 깊이 다루지 않은 개념" 또는 "연관 심화 주제"를 2~4개 제시합니다.
 
 ---
 created: 2026-03-10
@@ -720,12 +775,12 @@ updated: 2026-03-10
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
-# 단일 소스 디렉토리 (SOURCE_DIRS가 쉼표로 구분된 문자열일 경우 처리)
+# 1. 단일 소스 디렉토리 (SOURCE_DIRS가 쉼표로 구분된 문자열일 경우 처리)
 IFS=',' read -ra DIRS <<< "$SOURCE_DIRS"
 
 for dir in "${DIRS[@]}"; do
-    echo "=== [$dir] 검색 중 ==="
-    python "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
+    echo "=== 🗂️ Obsidian RAG 검색: [$dir] ==="
+    python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" \
       --query "{QUESTION}" \
       --sources-dir "$dir" \
       --top-k 5 \
@@ -737,6 +792,23 @@ for dir in "${DIRS[@]}"; do
       exit 1
     fi
 done
+
+# 2. Vault 지식 그래프 (Multi-hop 연계 검색)
+echo "=== 🕸️ Vault 지식 그래프(Multi-hop) 연계 검색 ==="
+python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_search.py" \
+  --query "{QUESTION}" \
+  --top-k 3 \
+  --threshold 0.3
+
+# 3. Mem0 동적 기억 하이브리드 검색
+echo "=== 🧠 Mem0 동적 기억 하이브리드 검색 ==="
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+  python3 "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" \
+    --query "{QUESTION}" \
+    --limit 3
+else
+  echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 하이브리드 검색 건너뜀"
+fi
 ```
 
 </tab>
@@ -745,11 +817,11 @@ done
 ```powershell
 if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
-# 단일 소스 디렉토리 (SOURCE_DIRS가 쉼표로 구분된 문자열일 경우 처리)
+# 1. 단일 소스 디렉토리 (SOURCE_DIRS가 쉼표로 구분된 문자열일 경우 처리)
 $DIRS = $SOURCE_DIRS -split ','
 
 foreach ($dir in $DIRS) {
-    Write-Host "=== [$dir] 검색 중 ==="
+    Write-Host "=== 🗂️ Obsidian RAG 검색: [$dir] ==="
     python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" `
       --query "{QUESTION}" `
       --sources-dir "$dir" `
@@ -761,6 +833,23 @@ foreach ($dir in $DIRS) {
       Write-Host "❌ RAG 검색 중 오류가 발생했습니다."
       exit 1
     }
+}
+
+# 2. Vault 지식 그래프 (Multi-hop 연계 검색)
+Write-Host "=== 🕸️ Vault 지식 그래프(Multi-hop) 연계 검색 ==="
+python "$env:AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_search.py" `
+  --query "{QUESTION}" `
+  --top-k 3 `
+  --threshold 0.3
+
+# 3. Mem0 동적 기억 하이브리드 검색
+Write-Host "=== 🧠 Mem0 동적 기억 하이브리드 검색 ==="
+if ($env:ANTHROPIC_API_KEY) {
+    python "$env:AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" `
+      --query "{QUESTION}" `
+      --limit 3
+} else {
+    Write-Host "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 하이브리드 검색 건너뜀"
 }
 ```
 

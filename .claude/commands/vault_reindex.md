@@ -1,0 +1,1 @@
+../../.gemini/workflows/vault_reindex.md
