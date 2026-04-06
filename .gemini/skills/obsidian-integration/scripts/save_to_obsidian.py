@@ -175,6 +175,127 @@ def save_note(
     return str(filepath)
 
 
+# ────────────────────── 위키 페이지 저장 ──────────────────────
+
+def build_wiki_note(
+    topic: str,
+    content: str,
+    category: str,
+    sources: Optional[List[str]] = None,
+    related_topics: Optional[List[str]] = None,
+    status: str = "🌿 seed",
+) -> str:
+    """위키 페이지용 마크다운 생성. content는 Claude가 이미 구조화한 상태."""
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    # sources wikilinks
+    sources_yaml = "  []"
+    if sources:
+        yaml_lines = [f'  - "[[{Path(s).stem}]]"' for s in sources]
+        sources_yaml = "\n".join(yaml_lines)
+
+    # related topics wikilinks
+    related_yaml = "  []"
+    if related_topics:
+        yaml_lines = [f'  - "[[{t.strip()}]]"' for t in related_topics]
+        related_yaml = "\n".join(yaml_lines)
+
+    frontmatter = f"""---
+created: {now_str}
+updated: {now_str}
+tags: [{category}, wiki]
+category: {category}
+type: wiki
+status: {status}
+session_count: 1
+sources:
+{sources_yaml}
+related:
+{related_yaml}
+---"""
+
+    return f"{frontmatter}\n\n{content.strip()}\n"
+
+
+def save_wiki_page(
+    topic: str,
+    content: str,
+    category: str,
+    vault_path: str,
+    sources: Optional[List[str]] = None,
+    related_topics: Optional[List[str]] = None,
+    status: str = "🌿 seed",
+) -> str:
+    """
+    위키 페이지 저장. 기존 파일이 있으면 content를 교체하고 메타데이터 갱신.
+
+    Returns:
+        저장된 파일의 절대경로 문자열
+    """
+    vault = Path(vault_path)
+    vault.mkdir(parents=True, exist_ok=True)
+
+    note_title = re.sub(r'[\\/*?:"<>|]', '_', topic)[:60].strip()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    existing = find_existing_note(vault, note_title)
+
+    if existing:
+        old_text = existing.read_text(encoding="utf-8")
+
+        # session_count 추출 및 증가
+        m = re.search(r"^session_count:\s*(\d+)", old_text, re.MULTILINE)
+        session_count = int(m.group(1)) + 1 if m else 2
+
+        # 상태 자동 승격
+        if session_count >= 3:
+            status = "🌳 tree"
+        elif session_count >= 2:
+            status = "🌱 sprout"
+
+        # frontmatter 갱신: updated, session_count, status
+        new_text = re.sub(
+            r"^(updated:\s*).*$", f"\\g<1>{now_str}",
+            old_text, flags=re.MULTILINE,
+        )
+        new_text = re.sub(
+            r"^(session_count:\s*).*$", f"\\g<1>{session_count}",
+            new_text, flags=re.MULTILINE,
+        )
+        new_text = re.sub(
+            r"^(status:\s*).*$", f"\\g<1>{status}",
+            new_text, flags=re.MULTILINE,
+        )
+
+        # frontmatter 이후 content 교체
+        fm_end = 0
+        fm_count = 0
+        for i, line in enumerate(new_text.splitlines()):
+            if line.strip() == "---":
+                fm_count += 1
+                if fm_count == 2:
+                    fm_end = sum(len(l) + 1 for l in new_text.splitlines()[:i+1])
+                    break
+
+        new_text = new_text[:fm_end] + "\n" + content.strip() + "\n"
+        existing.write_text(new_text, encoding="utf-8")
+        print(f"📝 위키 페이지 업데이트됨 (세션 {session_count}회차)")
+        return str(existing)
+    else:
+        filepath = vault / f"{note_title}.md"
+        note_text = build_wiki_note(
+            topic=topic,
+            content=content,
+            category=category,
+            sources=sources,
+            related_topics=related_topics,
+            status=status,
+        )
+        filepath.write_text(note_text, encoding="utf-8")
+        print("📝 새 위키 페이지 생성됨")
+        return str(filepath)
+
+
 # ────────────────────── 누적 세션 저장 ──────────────────────
 
 def find_existing_note(vault: Path, safe_topic: str) -> Optional[Path]:
@@ -353,15 +474,39 @@ def main() -> int:
         action="store_true",
         help="기존 노트의 마지막 세션에 내용을 실시간으로 이어서 추가",
     )
+    parser.add_argument(
+        "--wiki",
+        action="store_true",
+        help="위키 페이지 모드 — 정제된 백과사전 스타일 페이지 저장",
+    )
+    parser.add_argument(
+        "--related-topics",
+        default="",
+        help="관련 토픽 목록 (comma-separated, 위키링크용)",
+    )
     args = parser.parse_args()
 
     sources = (
         [s.strip() for s in args.sources.split(",") if s.strip()]
         if args.sources else None
     )
+    related_topics = (
+        [t.strip() for t in args.related_topics.split(",") if t.strip()]
+        if args.related_topics else None
+    )
 
     try:
-        if args.append or args.realtime:
+        if args.wiki:
+            filepath = save_wiki_page(
+                topic=args.topic,
+                content=args.content,
+                category=args.category,
+                vault_path=args.vault_path,
+                sources=sources,
+                related_topics=related_topics,
+                status=args.status,
+            )
+        elif args.append or args.realtime:
             filepath = append_session(
                 topic=args.topic,
                 content=args.content,

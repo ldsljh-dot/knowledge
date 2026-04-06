@@ -72,6 +72,16 @@ Manifests stored at: `{OBSIDIAN_VAULT_PATH}/Agent/{category}/rag/{safe_topic}/ma
 
 ### obsidian-integration
 ```bash
+# 위키 페이지 저장 (세션 종료 시 정제된 문서)
+python .gemini/skills/obsidian-integration/scripts/save_to_obsidian.py \
+  --topic "topic" \
+  --content "# Topic\n\n## Overview\n..." \
+  --category "AI_Study" \
+  --vault-path "$OBSIDIAN_VAULT_PATH/Agent" \
+  --wiki \
+  --related-topics "Related Topic A,Related Topic B"
+
+# 기존 세션 노트 (단일 파일)
 python .gemini/skills/obsidian-integration/scripts/save_to_obsidian.py \
   --topic "topic" \
   --content "## 💬 학습 기록\n..." \
@@ -80,6 +90,7 @@ python .gemini/skills/obsidian-integration/scripts/save_to_obsidian.py \
   --vault-path "$OBSIDIAN_VAULT_PATH/Agent"
 ```
 Outputs:
+- 위키 페이지(`--wiki`): `{vault-path}/{topic}.md` — 백과사전 스타일, 재실행 시 업데이트
 - 세션 노트: `{vault-path}/{category}/{YYYY-MM-DD}_{topic}.md`
 - 종합 누적 노트(`--append`): `{vault-path}/{topic}.md`
 
@@ -141,13 +152,13 @@ knowledge_tutor workflow:
   Step 0: Load prior context from Mem0 (if ANTHROPIC_API_KEY set)
   Phase 1: Tavily search → RAG manifest creation
   Phase 2: BM25 RAG retrieval per user question → Socratic tutoring loop
-  Phase 3: Save session to Obsidian + save summary to Mem0
+  Phase 3: Distill Q&A into wiki page → save to Obsidian + Mem0
 
 knowledge_query workflow:
   Step 0: Load related memories from Mem0 (if ANTHROPIC_API_KEY set)
   Phase 1: Load existing RAG manifest (or fall back to collection)
   Phase 2: BM25 Q&A loop using collected sources
-  Phase 3: Save session to Obsidian + save Q&A summary to Mem0
+  Phase 3: Distill Q&A into wiki page → save to Obsidian + Mem0
 
 knowledge_personal workflow:
   Phase 1: User selects action (events/memos CRUD)

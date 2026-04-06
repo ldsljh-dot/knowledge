@@ -41,12 +41,12 @@ The project follows a **Workflow + Skill** architecture where the LLM agent acts
 - **Path Compatibility**: Python scripts use `pathlib` to ensure paths work correctly across all platforms.
 - **Environment**: `.env` loading logic is provided for both Bash and PowerShell environments.
 
-### Core Workflows (`.gemini/workflows/`)
+### Core Workflows (`knowledge/.gemini/workflows/`)
 - **`knowledge_tutor.md`**: The primary entry point. Orchestrates the full search-learn-save lifecycle.
 - **`knowledge_query.md`**: Allows querying previously collected knowledge using RAG without re-searching the web.
 - **`myseminar.md`**: Real-time seminar Q&A capture. Classifies inputs (Question/Opinion/Answer/Key Point), enriches with RAG context, and saves to Obsidian. Generates unanswered question list at session end.
 
-### Skills (`.gemini/skills/`)
+### Skills (`knowledge/.gemini/skills/`)
 Skills are standalone Python scripts that perform specific tasks:
 - **`tavily-search`**: Uses Tavily for discovery and Jina Reader for deep content extraction (Markdown).
 - **`rag-retriever`**: Implements a BM25-based RAG system to provide context for tutoring while minimizing token usage.
@@ -71,7 +71,10 @@ Skills are standalone Python scripts that perform specific tasks:
 |------|---------|
 | **Full Tutor Workflow** | `/knowledge_tutor` |
 | **Move Topic** | `/knowledge_mv` |
-| **Search Only** | `python .gemini/skills/tavily-search/scripts/search_tavily.py --query "Topic" --output-dir "path"` |
-| **Create RAG Index** | `python .gemini/skills/rag-retriever/scripts/create_manifest.py --topic "Topic" --sources-dir "path"` |
-| **Retrieve Chunks** | `python .gemini/skills/rag-retriever/scripts/retrieve_chunks.py --query "Question" --sources-dir "path"` |
-| **Save to Obsidian** | `python .gemini/skills/obsidian-integration/scripts/save_to_obsidian.py --topic "Topic" ...` |
+| **Search Only** | `python knowledge/.gemini/skills/tavily-search/scripts/search_tavily.py --query "Topic" --output-dir "path"` |
+| **Create RAG Index** | `python knowledge/.gemini/skills/rag-retriever/scripts/create_manifest.py --topic "Topic" --sources-dir "path"` |
+| **Retrieve Chunks** | `python knowledge/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py --query "Question" --sources-dir "path"` |
+| **Save to Obsidian** | `python knowledge/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py --topic "Topic" ...` |
+ ...` |
+ --topic "Topic" ...` |
+ ...` |

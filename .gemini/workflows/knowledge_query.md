@@ -1,11 +1,9 @@
 ---
 created: 2026-03-10
-updated: 2026-03-10
+updated: 2026-04-05
 description: knowledge_tutor로 수집된 RAG manifest를 기반으로 기존 자료에서 즉시 질문-답변하는 워크플로우
 trigger: /knowledge_query
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 # Knowledge Query Workflow
 
@@ -17,8 +15,6 @@ updated: 2026-03-10
 BM25 RAG 검색으로 사용자 질문에 즉시 답변합니다.
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Prerequisites
 
@@ -83,8 +79,6 @@ try {
 - RAG manifest가 없으면 자동으로 `knowledge_tutor` 수집 흐름 실행
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Step 0: 문맥 로드 (Vault Index + Mem0)
 
@@ -335,16 +329,12 @@ if len(potential) > 15:
 > **예시 출력:**
 > ```
 > Topic                                    Files  Size_KB  Updated              SafeTopic
-> ---
-created: 2026-03-10
-updated: 2026-03-10---------------------------------------------------------------------------------------
+> ---------------------------------------------------------------------------------------------------------
 > Mamba SSM architecture                   6      185      2026-02-19T15:48:00  Mamba_SSM_architecture...
 > NVIDIA 자율주행 기술 특징과 동향            6      142      2026-02-19T16:15:00  NVIDIA__________
 > ```
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ### Step 1-2: 사용자 토픽 선택
 
@@ -356,17 +346,13 @@ updated: 2026-03-10
 #### 입력 유형별 처리
 
 | 입력 | 처리 |
-|---
-created: 2026-03-10
-updated: 2026-03-10---|------|
+|------|------|
 | `Path/to/Topic` (식별자 완전 일치) | 해당 manifest 로드 → Step 1-3 |
 | `전체` 또는 `all` | 전체 모든 manifest 합산 (Step 2-7 참조) |
 | `Topic1, Topic2` (쉼표 구분) | 해당 manifest들 병합 |
 | 목록에 **없는** 경로 | 해당 폴더에 .md 파일이 있으면 Step 1-4 (RAG 생성) |
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ### Step 1-3: Manifest에서 소스 경로 로드
 
@@ -460,8 +446,6 @@ print(f'TOPIC={m.get(\"topic\", \"\")}')
 </tabs>
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ### Step 1-3b: 이전 학습 기록 확인 및 로드
 
@@ -557,9 +541,7 @@ else:
 **탐색 결과별 처리:**
 
 | 결과 | 처리 |
-|---
-created: 2026-03-10
-updated: 2026-03-10---|------|
+|------|------|
 | `PREV_NOTES_FOUND=true` + `CUMULATIVE_NOTE` 있음 | 종합 누적 노트를 읽어 이전 학습 이력 요약 → 표시 후 이어서 진행 |
 | `PREV_NOTES_FOUND=true` + 세션 노트만 있음 | 가장 최근 세션 노트에서 핵심 요약 추출 → 표시 후 이어서 진행 |
 | `PREV_NOTES_FOUND=false` | "이전 학습 기록 없음, 새 세션 시작" 안내 후 Phase 2 진행 |
@@ -580,8 +562,6 @@ updated: 2026-03-10---|------|
 > 세션 노트는 최신 파일 1개만 읽으면 충분하다 (중복 방지).
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ### Step 1-4: RAG 없음 — 자동 생성 흐름 실행 ⭐
 
@@ -741,8 +721,6 @@ print(','.join(dirs))
 </tabs>
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Phase 2: RAG Q&A 루프
 
@@ -764,8 +742,6 @@ updated: 2026-03-10
 이 제안은 Step 1-3b에서 읽은 이전 학습 기록을 분석하여 LLM이 직접 생성합니다. Step 1-3b에서 로드한 파일 내용을 기반으로 "아직 깊이 다루지 않은 개념" 또는 "연관 심화 주제"를 2~4개 제시합니다.
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ### Step 2-2: RAG 청크 검색 실행
 
@@ -862,8 +838,6 @@ if ($env:ANTHROPIC_API_KEY) {
 > - 복잡한 종합 질문 → `--top-k 8`
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ### Step 2-3: RAG 신뢰도 계산
 
@@ -889,17 +863,13 @@ score_grade:
 
 **신뢰도 배지:**
 | 신뢰도 | 배지 | 의미 |
-|---
-created: 2026-03-10
-updated: 2026-03-10-----|------|------|
+|------|------|------|
 | 80~100% | 🟢 높음 | 자료에 충분한 근거 있음 |
 | 50~79%  | 🟡 보통 | 부분적 근거, 보완 가능 |
 | 20~49%  | 🟠 낮음 | 관련 자료 부족, 추가 검색 권장 |
 | 0~19%   | 🔴 매우 낮음 | 자료 없음, 반드시 추가 검색 필요 |
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ### Step 2-4: 청크 기반 심층 답변 생성 (Detailed Synthesis)
 
@@ -923,103 +893,44 @@ updated: 2026-03-10
 📄 출처: {파일명} (chunk #{n}, score={s:.3f})
 ...
 
----
-created: 2026-03-10
-updated: 2026-03-10
 📊 RAG 신뢰도: {배지} {신뢰도}%  ({검색된_청크_수}개 청크 참조, max_score={max_score:.3f})
 ```
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
-### Step 2-5: 실시간 Obsidian 저장 (Realtime Save)
+### Step 2-5: 후속 안내
 
-답변을 출력한 직후, 사용자의 질문과 방금 생성한 답변 내용을 Obsidian에 실시간으로 기록합니다.
-`--realtime` 플래그를 사용하여 마지막 세션에 내용을 이어서 추가합니다.
+답변 및 저장 완료 후 카테고리(`{CATEGORY}`)를 확인하여 맞춤형으로 안내합니다.
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
-```bash
-# 환경 변수 로드
-if [ -f .env ]; then set -a; source .env; set +a; fi
-if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
-
-SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
-SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-AGENT_DIR="$OBSIDIAN_VAULT_PATH"
-
-# --realtime 플래그: 현재 세션 블록에 질문/답변 이어서 추가
-python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
-  --topic "{TOPIC}" \
-  --content "**Q:** {방금_사용자가_입력한_질문}
-
-**A:** {방금_생성한_답변_내용_전체}" \
-  --category "Knowledge_Query" \
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
-  --realtime
-```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-$SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
-$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-
-python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
-  --topic "{TOPIC}" `
-  --content "**Q:** {방금_사용자가_입력한_질문}`n`n**A:** {방금_생성한_답변_내용_전체}" `
-  --category "Knowledge_Query" `
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
-  --realtime
-```
-
-</tab>
-</tabs>
-
-> 💡 **중요**: 답변을 사용자에게 제공한 후, 반드시 위 명령어를 실행하여 기록을 남기세요.
-
----
-created: 2026-03-10
-updated: 2026-03-10
-
-### Step 2-6: 후속 안내
-
-답변 및 저장 완료 후 항상 안내합니다:
-
+#### 일반 토픽인 경우 (Category != Code_Analysis*)
 ```
 [계속]    다른 질문을 입력하세요.
 [범위]    다른 토픽도 추가로 검색할까요? (현재: {topic})
-[보강]    신뢰도가 낮으면 → "추가 검색해줘" / "더 찾아봐" / "크롤링해줘" 로 웹 검색 실행
+[보강]    신뢰도가 낮으면 → "추가 검색해줘" / "크롤링해줘" 로 웹 검색 실행
 [종료]    'exit' 또는 '종료'
 ```
+> ⚠️ **"⚡ 신뢰도가 낮습니다. '추가 검색해줘'라고 입력하면 웹에서 최신 자료를 수집합니다."**
 
-> ⚠️ 신뢰도가 🟠 낮음(20~49%) 또는 🔴 매우 낮음(0~19%)이면 다음 메시지를 강조 표시:
-> **"⚡ 신뢰도가 낮습니다. '추가 검색해줘'라고 입력하면 웹에서 최신 자료를 수집합니다."**
+#### 코드 분석 토픽인 경우 (Category == Code_Analysis*)
+```
+[계속]    다른 질문을 입력하세요.
+[범위]    다른 Layer(폴더)도 추가로 검색할까요? (현재: {topic})
+[분석]    신뢰도가 낮거나 세부 구현이 궁금하면 → "소스 찾아봐" 로 현재 세션에서만 실시간 코드 탐색
+[갱신]    영구적인 지식베이스 보강이 필요하면 → `/code_analyze` 실행 권장
+[종료]    'exit' 또는 '종료'
+```
+> ⚠️ **"⚡ 요약된 문서에 해당 내용이 부족합니다. '소스 찾아봐'라고 입력하시면 실제 로컬 코드를 일회성으로 탐색하여 답변해 드립니다. 코드 구조 변경을 영구적으로 반영하려면 `/code_analyze` 워크플로우를 실행해 주세요."**
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
-### Step 2-7: 추가 크롤링 요청 처리
+### Step 2-5: 지식 동적 보강 프로세스 분리 (Web Crawling vs Code Deep Dive)
 
-사용자가 다음 키워드를 입력하면 추가 웹 크롤링을 실행합니다:
-- `추가 검색`, `더 찾아봐`, `크롤링해줘`, `웹 검색`, `자료 추가`, `검색 보강`, `search more`
+사용자의 보강 요청 키워드와 현재 카테고리(`{CATEGORY}`)에 따라 다음 두 가지 분기로 나뉩니다.
 
-**추가 크롤링 흐름:**
+#### 분기 A: Web Crawling (일반 지식 보강)
+**조건:** 카테고리가 `Code_Analysis`가 **아니고**, 사용자가 `추가 검색`, `더 찾아봐`, `크롤링해줘`, `웹 검색` 등을 입력한 경우.
+
+**실행 흐름:**
 
 <tabs>
 <tab label="Linux/macOS (Bash)">
@@ -1110,11 +1021,25 @@ if ($LASTEXITCODE -ne 0) {
    ```
 3. 개선된 신뢰도로 답변을 갱신
 
----
-created: 2026-03-10
-updated: 2026-03-10
+#### 분기 B: Code Deep Dive (실시간 코드 탐색 및 가이드)
+**조건:** 카테고리가 `Code_Analysis` 하위이고, 사용자가 `소스 찾아봐`, `딥다이브`, `실제 코드 확인` 등을 입력한 경우.
 
-### Step 2-8: 다중 토픽 동시 검색
+**실행 흐름:**
+1. **일회성 로컬 코드 탐색 (Read-Only)**: 
+   AI 에이전트(LLM)는 질문과 관련된 실제 로컬 소스 코드(`*.py`, `*.cpp` 등)를 내장 도구(`grep_search`, `read_file`, `glob` 등)를 활용해 직접 탐색합니다.
+2. **실시간 답변 제공**:
+   탐색한 코드를 바탕으로 사용자의 질문에 상세히 답변합니다. (이때 옵시디언의 마크다운 RAG 소스 파일을 임의로 수정하거나 덮어쓰지 않습니다.)
+3. **지식베이스 갱신 안내 (Strict Guide)**:
+   답변을 제공한 직후, RAG 지식베이스(옵시디언)의 정보가 최신 상태가 아니거나 누락되어 있음을 알리고, 영구적인 지식 동기화를 위해 사용자가 직접 `/code_analyze` 워크플로우를 실행하도록 명확히 안내합니다.
+   
+   **예시 출력:**
+   > "탐색한 결과, 해당 구현은 `TOGSim/src/Simulator.cc`에 다음과 같이 정의되어 있습니다: ... 
+   > 
+   > ⚠️ **안내**: 현재 RAG 지식베이스에는 이 최신 코드 구조가 반영되어 있지 않습니다. 옵시디언의 문서 및 RAG 인덱스를 영구적으로 갱신하려면, 질의응답을 마친 후 터미널에서 `/code_analyze`를 실행하여 해당 Layer의 지식을 최신화해 주세요."
+
+---
+
+### Step 2-5: 다중 토픽 동시 검색
 
 사용자가 `[범위]`를 요청하거나 처음에 복수 토픽을 지정한 경우:
 
@@ -1225,25 +1150,58 @@ foreach ($dir in $DIRS) {
 </tabs>
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
-### Step 2-9: 종료 감지
+### Step 2-5: 종료 감지
 
 사용자가 다음 중 하나를 입력하면 Phase 3으로 이동:
 - `종료`, `exit`, `quit`, `그만`, `끝`, `done`
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
-## Phase 3: 세션 종료 및 총괄 리포트 생성
+## Phase 3: 세션 종료 및 위키 페이지 생성
 
-세션 동안 `--realtime`으로 작성된 Obsidian 노트를 기반으로, 학습한 내용을 총괄적으로 정리하는 **상세 리포트**를 생성하여 노트 마지막에 덧붙입니다. 
+세션의 전체 Q&A를 기반으로, 학습한 내용을 **정제된 위키 백과사전 스타일 문서**로 변환하여 Obsidian에 저장합니다.
 
-1. **컨텍스트 로드**: LLM은 현재 세션에서 다루었던 전체 Q&A 기록을 기반으로 학습 내용을 다시 읽어들입니다.
-2. **총괄 리포트 작성**: 단순 요약이 아닌, 이번 세션에서 파악한 기술적 핵심, 연관 관계, 그리고 시사점이 포함된 **"세션 총괄 요약 리포트(Session Executive Summary)"**를 마크다운 형식으로 작성합니다.
-3. **Obsidian 반영**: 작성된 리포트를 기존 노트의 마지막에 이어서 저장합니다.
+### Step 3-1: 위키 페이지 작성
+
+LLM은 ��션의 전체 Q&A를 바탕으로 **위키 백과사전 스타일**의 문서를 작성합니다.
+
+#### 작성 규칙
+- **Q&A 형식 금지**. 백과사전 항목처럼 서술합니다.
+- `[[wikilink]]`로 관련 개념을 연결합니다.
+- 코드 예제가 있다면 설명 자료로 재구성합니다.
+- 세션에서 다룬 모든 핵심 내용을 빠짐없이 포함합니다.
+- 한국어로 작성하되, 기술 용어는 영문 병기합니다.
+
+#### 위키 페이지 구조 템플릿
+
+```markdown
+# {Topic Name}
+
+## Overview
+{2-3 문단. 무엇인지, 왜 중요한지, 어떤 맥락에서 사용되는지}
+
+## {Core Concept 1}
+{구조화된 설명. [[wikilink]]로 관련 개념 연결}
+
+## {Core Concept 2}
+{세션에서 다룬 주제 수만큼 섹션 생성}
+
+## Key Takeaways
+- 핵심 포인트 1
+- 핵심 포인트 2
+
+## Open Questions
+- 미해결 질문 (있는 경우, 없으면 섹션 생략)
+
+## Related Topics
+- [[Topic A]] — 연결 설명
+- [[Topic B]] — 연결 설명
+```
+
+> 💡 **중요**: 리포트는 단순한 대화 나열이 아니라, 전문가가 작성한 백과사전 항목처럼 체계적이고 읽기 좋아야 합니다.
+
+### Step 3-2: 위키 페이지 저장
 
 <tabs>
 <tab label="Linux/macOS (Bash)">
@@ -1257,20 +1215,15 @@ SAFE_CATEGORY=$(echo "{CATEGORY}" | tr ' /' '_')
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
 AGENT_DIR="$OBSIDIAN_VAULT_PATH"
 
-# --realtime 플래그를 통해 총괄 리포트를 파일의 맨 마지막에 추가
+# --wiki 플래그: 정제된 위키 페이지로 저장
 python "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
   --topic "{TOPIC}" \
-  --content "
-
----
-created: 2026-03-10
-updated: 2026-03-10
-### 📝 세션 총괄 요약 리포트
-{AI가_생성한_상세_총괄_요약_리포트_내용}
-" \
-  --category "Knowledge_Query" \
+  --content "{위키_페이지_전체_내용}" \
+  --category "{CATEGORY}" \
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
-  --realtime
+  --wiki \
+  --sources "{쉼표_구분_소스_파일_경로}" \
+  --related-topics "{쉼표_구분_관련_토픽}"
 ```
 
 </tab>
@@ -1291,23 +1244,20 @@ $SAFE_CATEGORY = "{CATEGORY}" -replace '[ /]', '_'
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
 $AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
 
-# PowerShell의 줄바꿈을 활용하여 리포트 추가
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
   --topic "{TOPIC}" `
-  --content "`n---
-created: 2026-03-10
-updated: 2026-03-10`n### 📝 세션 총괄 요약 리포트`n{AI가_생성한_상세_총괄_요약_리포트_내용}`n" `
-  --category "Knowledge_Query" `
+  --content "{위키_페이지_전체_내용}" `
+  --category "{CATEGORY}" `
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
-  --realtime
+  --wiki `
+  --sources "{쉼표_구분_소스_파일_경로}" `
+  --related-topics "{쉼표_구분_관련_토픽}"
 ```
 
 </tab>
 </tabs>
 
-> 💡 **중요**: 리포트는 단순한 대화 나열이 아니라, 전문가가 이번 세션에서 탐구한 주제들의 흐름을 한눈에 파악할 수 있도록 구조화된 내용이어야 합니다.
-
-### Phase 3-b: Q&A 요약 Mem0 저장
+### Step 3-3: Q&A 요약 Mem0 저장
 
 Obsidian 저장 완료 후, 핵심 Q&A를 Mem0 장기 기억에도 저장합니다.
 `ANTHROPIC_API_KEY`가 없으면 이 단계를 건너뜁니다.
@@ -1350,9 +1300,31 @@ if ($env:ANTHROPIC_API_KEY) {
 </tab>
 </tabs>
 
+
+### Step 3-4: log.md 기록
+
+세션 완료 후 `$OBSIDIAN_VAULT_PATH/log.md`에 한 줄 추가합니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+echo "## [$(date +%Y-%m-%d)] query | {TOPIC}" >> "$OBSIDIAN_VAULT_PATH/log.md"
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+$today = Get-Date -Format "yyyy-MM-dd"
+Add-Content -Path "$env:OBSIDIAN_VAULT_PATH/log.md" -Value "## [$today] query | {TOPIC}"
+```
+
+</tab>
+</tabs>
+
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## 예시 세션
 
@@ -1361,9 +1333,7 @@ USER: /knowledge_query
 
 AI: 등록된 RAG 목록:
     식별자 (Category/SafeTopic)                   Topic                              파일  KB    Updated
-    ---
-created: 2026-03-10
-updated: 2026-03-10------------------------------------------------------------------------------------------------------
+    ---------------------------------------------------------------------------------------------------------
     [자율주행]
       자율주행/NVIDIA__________                   NVIDIA 자율주행 기술 특징과 동향   6     142   2026-02-19
     [AI]
@@ -1421,8 +1391,6 @@ AI: 세션을 Obsidian에 저장하시겠습니까? (y/n)
 ```
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Notes
 
@@ -1433,9 +1401,7 @@ updated: 2026-03-10
 - **knowledge_tutor와의 차이**:
 
 | | `knowledge_tutor` | `knowledge_query` |
-|---
-created: 2026-03-10
-updated: 2026-03-10|---|---|
+|---|---|---|
 | 웹 검색 | ✅ Tavily + Jina | ❌ (기존 자료만) |
 | 속도 | 느림 (수집 포함) | ⚡ 빠름 (로컬 BM25) |
 | 용도 | 새 주제 학습 | 기존 자료 즉시 조회 |

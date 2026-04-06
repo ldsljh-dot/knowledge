@@ -37,15 +37,16 @@ load_env()
 
 
 def to_relative(path: Path, base: Path) -> str:
-    """base 기준 상대경로로 변환. 실패 시 절대경로 반환."""
+    """base 기준 상대경로로 변환. sibling 폴더도 지원 (os.path.relpath 사용)."""
     try:
         return str(path.resolve().relative_to(base.resolve()))
     except ValueError:
-        return str(path.resolve())
+        # sibling 등 비-하위 경로: os.path.relpath로 ../ 형식 생성
+        return os.path.relpath(path.resolve(), base.resolve())
 
 
 def scan_sources(source_dirs: list[str], base: Path) -> dict:
-    """소스 디렉토리의 .md 파일 목록과 통계를 수집 (base 기준 상대경로)"""
+    """소스 디렉토리의 .md 파일 목록과 통계를 수집 (base 기준 상대경로, 서브폴더 포함)"""
     files = []
     total_bytes = 0
     for src_dir in source_dirs:
@@ -53,7 +54,7 @@ def scan_sources(source_dirs: list[str], base: Path) -> dict:
         if not p.exists():
             print(f"  [warn] 소스 디렉토리 없음: {src_dir}", file=sys.stderr)
             continue
-        for md in sorted(p.glob("*.md")):
+        for md in sorted(p.glob("**/*.md")):  # 서브폴더 재귀 탐색
             size = md.stat().st_size
             files.append({
                 "path": to_relative(md, base),

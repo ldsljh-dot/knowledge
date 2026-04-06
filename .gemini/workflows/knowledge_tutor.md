@@ -773,8 +773,8 @@ updated: 2026-03-10
    - 불확실한 내용은 "추가 검색이 필요합니다"라고 명시합니다.
 4. **한국어 응답 + 기술 용어 병기**
    - 예: *"자기 수정형 타이탄(Self-Modifying Titans)은 연속체 메모리 시스템(Continuum Memory System)과 결합하여..."*
-5. **학습 대화 기록 (실시간 저장)**
-   - 모든 심층 답변과 분석 내용을 출력한 직후, Step 2-5 절차에 따라 즉시 실시간으로 Obsidian에 저장합니다.
+5. **학습 대화 기록**
+   - 모든 심층 답변과 분석 내용은 LLM 컨텍스트에 유지합니다. 세션 종료 시(Phase 3) 정제된 위키 페이지로 일괄 저장됩니다.
 6. **신뢰도 항상 표시**
    - 모든 답변 하단에 📊 RAG 신뢰도 배지를 포함합니다.
 
@@ -801,76 +801,11 @@ updated: 2026-03-10
 created: 2026-03-10
 updated: 2026-03-10
 
-### Step 2-5: 실시간 Obsidian 저장 (Realtime Save)
+### Step 2-5: 자동 추가 검색 (신뢰도 낮을 때)
 
-답변을 출력한 직후, 사용자의 질문과 방금 생성한 답변 내용을 Obsidian에 실시간으로 기록합니다.
-`--realtime` 플래그를 사용하여 마지막 세션에 내용을 이어서 추가합니다.
-
-**저장 범위:** `--content`에 포함할 내용은 다음과 같습니다:
-- `**Q:** {사용자가 입력한 질문 그대로}`
-- `**A:** {전문가 심층 분석 리포트 전체 텍스트}` (신뢰도 배지, 출처, Socratic 질문 포함)
-- 세션 노트 파일: `$OBSIDIAN_VAULT_PATH/{CATEGORY}/{SAFE_TOPIC}/Knowledge_Tutor/{오늘_날짜}_{TOPIC}.md`
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
-```bash
-# 환경 변수 로드
-if [ -f .env ]; then set -a; source .env; set +a; fi
-if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
-
-SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
-
-# --realtime 플래그: 현재 세션 블록에 질문/답변 이어서 추가
-python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
-  --topic "{TOPIC}" \
-  --content "**Q:** {방금_사용자가_입력한_질문}
-
-**A:** {방금_생성한_답변_내용_전체}" \
-  --category "Knowledge_Tutor" \
-  --vault-path "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC" \
-  --realtime
-
-```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-$SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
-
-python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
-  --topic "{TOPIC}" `
-  --content "**Q:** {방금_사용자가_입력한_질문}`n`n**A:** {방금_생성한_답변_내용_전체}" `
-  --category "Knowledge_Tutor" `
-  --vault-path "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC" `
-  --realtime
-```
-
-</tab>
-</tabs>
-
-> 💡 **중요**: 답변을 사용자에게 제공한 후, 반드시 위 명령어를 실행하여 기록을 남기세요.
-
----
-created: 2026-03-10
-updated: 2026-03-10
-
-### Step 2-6: 자동 추가 검색 (신뢰도 낮을 때)
-
-Step 2-5 저장 직후, RAG 신뢰도를 확인합니다:
+답변 출력 직후, RAG 신뢰도를 확인합니다:
 - **신뢰도 < 20% (🔴)**: 사용자에게 묻지 않고 자동으로 아래 검색 실행
-- **신뢰도 ≥ 20%**: 이 단계 건너뜀 → Step 2-7로
+- **신뢰도 ≥ 20%**: 이 단계 건너뜀 → Step 2-6으로
 
 **자동 실행 조건 충족 시 흐름:**
 > "⚡ 신뢰도가 너무 낮아 자동으로 추가 자료를 검색합니다..."
@@ -926,7 +861,7 @@ python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py"
 
 ---
 
-### Step 2-7: 사용자 요청 추가 크롤링
+### Step 2-6: 사용자 요청 추가 크롤링
 
 사용자가 다음 키워드를 입력하면 추가 웹 크롤링을 실행합니다:
 - `추가 검색`, `더 찾아봐`, `크롤링해줘`, `웹 검색`, `자료 추가`, `검색 보강`, `search more`
@@ -1021,7 +956,7 @@ if ($LASTEXITCODE -ne 0) {
 created: 2026-03-10
 updated: 2026-03-10
 
-### Step 2-8: 종료 감지
+### Step 2-7: 종료 감지
 
 사용자가 다음 중 하나를 입력하면 Phase 3으로 이동:
 - `종료`, `exit`, `quit`, `그만`, `끝`, `done`
@@ -1030,13 +965,50 @@ updated: 2026-03-10
 created: 2026-03-10
 updated: 2026-03-10
 
-## Phase 3: 세션 종료 및 총괄 리포트 생성
+## Phase 3: 세션 종료 및 위키 페이지 생성
 
-세션 동안 `--realtime`으로 작성된 Obsidian 노트를 기반으로, 학습한 내용을 총괄적으로 정리하는 **상세 리포트**를 생성하여 노트 마지막에 덧붙입니다. 
+세션의 전체 Q&A를 기반으로, 학습한 내용을 **정제된 위키 백과사전 스타일 문서**로 변환하여 Obsidian에 저장합니다.
 
-1. **컨텍스트 로드**: LLM은 현재 세션에서 다루었던 전체 Q&A 기록을 기반으로 학습 내용을 다시 읽어들입니다.
-2. **총괄 리포트 작성**: 단순 요약이 아닌, 이번 세션에서 파악한 기술적 핵심, 연관 관계, 그리고 시사점이 포함된 **"세션 총괄 요약 리포트(Session Executive Summary)"**를 마크다운 형식으로 작성합니다.
-3. **Obsidian 반영**: 작성된 리포트를 기존 노트의 마지막에 이어서 저장합니다.
+### Step 3-1: 위키 페이지 작성
+
+LLM은 세션의 전체 Q&A를 바탕으로 **위키 백과사전 스타일**의 문서를 작성합니다.
+
+#### 작성 규칙
+- **Q&A 형식 금지**. 백과사전 항목처럼 서술합니다.
+- `[[wikilink]]`로 관련 개념을 연결합니다.
+- 코드 예제가 있다면 설명 자료로 재구성합니다.
+- 세션에서 다룬 모든 핵심 내용을 빠짐없이 포함합니다.
+- 한국어로 작성하되, 기술 용어는 영문 병기합니다.
+
+#### 위키 페이지 구조 템플릿
+
+```markdown
+# {Topic Name}
+
+## Overview
+{2-3 문단. 무엇인지, 왜 중요한지, 어떤 맥락에서 사용되는지}
+
+## {Core Concept 1}
+{구조화된 설명. [[wikilink]]로 관련 개념 연결}
+
+## {Core Concept 2}
+{세션에서 다룬 주제 수만큼 섹션 생성}
+
+## Key Takeaways
+- 핵심 포인트 1
+- 핵심 포인트 2
+
+## Open Questions
+- 미해결 질문 ({UNRESOLVED} 목록 반영, 없으면 섹션 생략)
+
+## Related Topics
+- [[Topic A]] — 연결 설명
+- [[Topic B]] — 연결 설명
+```
+
+> 💡 **중요**: 리포트는 단순한 대화 나열이 아니라, 전문가가 작성한 백과사전 항목처럼 체계적이고 읽기 좋아야 합니다.
+
+### Step 3-2: 위키 페이지 저장
 
 <tabs>
 <tab label="Linux/macOS (Bash)">
@@ -1048,20 +1020,15 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 SAFE_TOPIC=$(echo "{TOPIC}" | tr ' /' '_')
 
-# --realtime 플래그를 통해 총괄 리포트를 파일의 맨 마지막에 추가
+# --wiki 플래그: 정제된 위키 페이지로 저장
 python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
   --topic "{TOPIC}" \
-  --content "
-
----
-created: 2026-03-10
-updated: 2026-03-10
-### 📝 세션 총괄 요약 리포트
-{AI가_생성한_상세_총괄_요약_리포트_내용}
-" \
-  --category "Knowledge_Tutor" \
+  --content "{위키_페이지_전체_내용}" \
+  --category "{CATEGORY}" \
   --vault-path "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC" \
-  --realtime
+  --wiki \
+  --sources "{쉼표_구분_소스_파일_경로}" \
+  --related-topics "{쉼표_구분_관련_토픽}"
 ```
 
 </tab>
@@ -1080,23 +1047,20 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 $SAFE_TOPIC = "{TOPIC}" -replace '[ /]', '_'
 
-# PowerShell의 줄바꿈을 활용하여 리포트 추가
 python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
   --topic "{TOPIC}" `
-  --content "`n---
-created: 2026-03-10
-updated: 2026-03-10`n### 📝 세션 총괄 요약 리포트`n{AI가_생성한_상세_총괄_요약_리포트_내용}`n" `
-  --category "Knowledge_Tutor" `
+  --content "{위키_페이지_전체_내용}" `
+  --category "{CATEGORY}" `
   --vault-path "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_TOPIC" `
-  --realtime
+  --wiki `
+  --sources "{쉼표_구분_소스_파일_경로}" `
+  --related-topics "{쉼표_구분_관련_토픽}"
 ```
 
 </tab>
 </tabs>
 
-> 💡 **중요**: 리포트는 단순한 대화 나열이 아니라, 전문가가 이번 세션에서 탐구한 주제들의 흐름을 한눈에 파악할 수 있도록 구조화된 내용이어야 합니다.
-
-### Step 3-2b: 학습 요약 Mem0 저장
+### Step 3-3: 학습 요약 Mem0 저장
 
 Obsidian 저장 완료 후, 이번 세션 요약을 Mem0 장기 기억에도 저장합니다.
 `{UNRESOLVED}`는 튜터링 중 미해결로 표시된 질문들의 목록입니다 (없으면 "없음").
@@ -1140,7 +1104,7 @@ if ($env:ANTHROPIC_API_KEY) {
 </tab>
 </tabs>
 
-### Step 3-3: Vault Index 자동 갱신
+### Step 3-4: Vault Index 자동 갱신
 
 새 지식이 저장되었으므로 Vault Index를 갱신합니다.
 
@@ -1165,17 +1129,41 @@ python "$env:AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py"
 </tab>
 </tabs>
 
-### Step 3-4: 완료 메시지
+### Step 3-5: log.md 기록
+
+세션 완료 후 `$OBSIDIAN_VAULT_PATH/log.md`에 한 줄 추가합니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+echo "## [$(date +%Y-%m-%d)] tutor | {TOPIC}" >> "$OBSIDIAN_VAULT_PATH/log.md"
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+$today = Get-Date -Format "yyyy-MM-dd"
+Add-Content -Path "$env:OBSIDIAN_VAULT_PATH/log.md" -Value "## [$today] tutor | {TOPIC}"
+```
+
+</tab>
+</tabs>
+
+### Step 3-6: 완료 메시지
 
 ```
 ✅ 학습을 완료했습니다!
 
 📁 생성/업데이트된 파일:
-  - 누적 노트: {CATEGORY}/{TOPIC}.md  ← 세션이 쌓일수록 기록이 누적됩니다
-  - 원본 자료: {CATEGORY}/sources/{safe_topic}/ (총 N개 파일)
-  - RAG manifest: {CATEGORY}/rag/{safe_topic}/manifest.json
+  - 위키 페이지: {CATEGORY}/{SAFE_TOPIC}/{SAFE_TOPIC}.md  ← 정제된 백과사전 스타일 문서
+  - 원본 자료: {CATEGORY}/{SAFE_TOPIC}/sources/ (총 N개 파일)
+  - RAG manifest: {CATEGORY}/{SAFE_TOPIC}/rag/manifest.json
+  - log.md: ✅ 갱신 완료
 
-💡 같은 주제로 다음 세션을 진행하면 동일 노트에 '세션 2', '세션 3'... 이 추가됩니다.
+💡 같은 주제로 다시 학습하면 위키 페이지가 더 풍부하게 업데이트됩니다.
 💡 다음에 이 주제를 다시 조회하려면:
    /knowledge_query → '{CATEGORY}/{safe_topic}' 선택
 

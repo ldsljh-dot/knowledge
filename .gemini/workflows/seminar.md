@@ -207,9 +207,18 @@ updated: 2026-03-10
 
 ## Phase 4: 안전 종료
 
+### Step 4-1: 완료 메시지
+
 ```bash
 echo "✅ 모든 세션 기록이 안전하게 저장되었습니다."
 echo "📁 파일 위치: $AGENT_DIR/$SAFE_CATEGORY"
+```
+
+### Step 4-2: log.md 기록
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+echo "## [$(date +%Y-%m-%d)] seminar | {TOPIC}" >> "$OBSIDIAN_VAULT_PATH/log.md"
 ```
 
 ---
