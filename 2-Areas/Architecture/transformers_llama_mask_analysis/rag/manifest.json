@@ -1,0 +1,44 @@
+{
+  "topic": "transformers_llama_mask_analysis",
+  "category": "2-Areas/Architecture",
+  "created": "2026-04-07",
+  "updated": "2026-04-07",
+  "sources": [
+    {
+      "file": "01_Structure_and_Interface.md",
+      "title": "Structure and Interface",
+      "description": "AttentionMaskInterface, mask functions, public API, extension points",
+      "size_kb": 18,
+      "tags": ["architecture", "interface", "api"]
+    },
+    {
+      "file": "02_Data_and_Control_Flow.md",
+      "title": "Data and Control Flow",
+      "description": "Complete sequence diagram, blocking/non-blocking patterns, compilation optimization",
+      "size_kb": 12,
+      "tags": ["dataflow", "sequence-diagram", "control-flow"]
+    },
+    {
+      "file": "03_Domain_Logic_and_State.md",
+      "title": "Domain Logic and State",
+      "description": "Causal mask algorithms (non-vmap, vmap, packed), state machine, cache management",
+      "size_kb": 16,
+      "tags": ["algorithm", "state-machine", "cache"]
+    },
+    {
+      "file": "04_NFR_and_Observability.md",
+      "title": "NFR and Observability",
+      "description": "Performance optimization, error handling, logging, debugging tips",
+      "size_kb": 14,
+      "tags": ["performance", "error-handling", "debugging"]
+    }
+  ],
+  "main_document": "transformers_llama_mask_analysis.md",
+  "vault_path": "/Users/jhjh/projects/transformers/knowledge",
+  "project": "transformers",
+  "analysis_depth": "Standard",
+  "key_files": [
+    "src/transformers/masking_utils.py",
+    "src/transformers/models/llama/modeling_llama.py"
+  ]
+}
