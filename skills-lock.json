@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "image-generation": {
+      "source": "bytedance/deer-flow",
+      "sourceType": "github",
+      "computedHash": "dd2d450cdb2fcd39c5f07b8033208bd3676a62f8db3770df01f7ce04dbb61550"
+    },
+    "ppt-generation": {
+      "source": "bytedance/deer-flow",
+      "sourceType": "github",
+      "computedHash": "1f95cca84b78975d6552da8e19c31fcb610ac80acc16f29c96c57bc6bc4d2173"
+    },
+    "pptx-generator": {
+      "source": "MiniMax-AI/skills",
+      "sourceType": "github",
+      "computedHash": "956dcd3e9c6d0b4f174f65ae0046dc51217df2436a38aea08a91f75701db6b52"
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "harness_name": "ppt-generator-harness",
+  "version": "1.0.0",
+  "description": "PPT 생성을 위한 Rule-Skill-Feedback 하네스",
+
+  "rules": {
+    "text_constraints": {
+      "max_bullets_per_slide": 3,
+      "max_chars_per_bullet": 20,
+      "max_title_length": 30,
+      "require_page_number": true
+    },
+    "output_format": {
+      "required_fields": [
+        "slide_number",
+        "type",
+        "title",
+        "subtitle",
+        "key_points",
+        "visual_description",
+        "speaker_script"
+      ],
+      "slide_types": ["title", "content", "conclusion", "toc", "section_divider"]
+    },
+    "tone_and_manner": {
+      "script_style": "professional_conversational",
+      "script_ending": "습니다/하죠",
+      "jargon_handling": "add_brief_analogy_in_parentheses",
+      "language": "ko"
+    },
+    "validation_gates": [
+      "text_length_check",
+      "logical_flow_check",
+      "duplication_check",
+      "format_compliance_check"
+    ]
+  },
+
+  "skills": [
+    {
+      "skill_id": "structure",
+      "name": "구조화 스킬",
+      "description": "원문 데이터를 서론-본론-결론 구조로 슬라이드 목차 추출",
+      "input": "raw_content",
+      "output": "slide_outline",
+      "prompt_template": "다음 원문을 읽고 서론-본론-결론 구조로 {{num_slides}}장의 슬라이드 목차를 추출해줘. 각 슬라이드의 타입(title/content/conclusion)도 함께 지정해."
+    },
+    {
+      "skill_id": "copywriting",
+      "name": "카피라이팅 스킬",
+      "description": "목차를 바탕으로 후킹하는 제목과 핵심 메시지 생성",
+      "input": "slide_outline",
+      "output": "enhanced_outline",
+      "prompt_template": "각 슬라이드의 제목을 후킹하는 한 줄 카피로 변환해. 본문은 최대 3개의 불릿 포인트로 요약하고, 각 불릿은 {{max_chars_per_bullet}}자를 넘지 않게 해.",
+      "constraints": {
+        "max_bullets_per_slide": 3,
+        "max_chars_per_bullet": 20
+      }
+    },
+    {
+      "skill_id": "visualization",
+      "name": "시각화 기획 스킬",
+      "description": "각 슬라이드에 적합한 시각 자료 아이디어 묘사",
+      "input": "enhanced_outline",
+      "output": "outline_with_visuals",
+      "prompt_template": "각 슬라이드의 내용을 가장 직관적으로 보여줄 수 있는 시각 자료(그래프, 다이어그램, 이미지 등)를 묘사해. Midjourny용 프롬프트도 함께 생성해."
+    },
+    {
+      "skill_id": "scripting",
+      "name": "발표 스크립트 스킬",
+      "description": "각 슬라이드별 1분 분량의 발표자 스크립트 작성",
+      "input": "outline_with_visuals",
+      "output": "complete_slides",
+      "prompt_template": "요약된 본문을 바탕으로 실제 발표에서 1분 동안 말할 수 있는 분량의 스크립트를 작성해. 전문적이지만 친근한 구어체(~습니다, ~하죠)를 사용하고, 전문 용어는 괄호 안에 짧은 비유를 덧붙여."
+    }
+  ],
+
+  "feedback": {
+    "checklist": [
+      {
+        "id": "text_length",
+        "description": "한 슬라이드당 텍스트가 {{max_chars_per_bullet}}자를 넘은 곳이 있는가?",
+        "action_if_fail": "rewrite"
+      },
+      {
+        "id": "logical_flow",
+        "description": "이전 슬라이드와 다음 슬라이드의 내용이 매끄럽게 이어지는가?",
+        "action_if_fail": "rewrite"
+      },
+      {
+        "id": "duplication",
+        "description": "비슷한 의미의 단어가 반복해서 사용되었는가?",
+        "action_if_fail": "rewrite"
+      },
+      {
+        "id": "format_compliance",
+        "description": "출력 형식이 required_fields를 모두 포함하는가?",
+        "action_if_fail": "rewrite"
+      }
+    ],
+    "max_rewrite_attempts": 3,
+    "back_pressure": "위 체크리스트에서 하나라도 통과하지 못했다면, 기준을 만족할 때까지 스스로 다시 작성(Rewrite)한 후 최종 결과물만 나에게 보여줘."
+  },
+
+  "execution_flow": {
+    "type": "sequential",
+    "steps": [
+      {"step": 1, "skill": "structure"},
+      {"step": 2, "skill": "copywriting"},
+      {"step": 3, "skill": "visualization"},
+      {"step": 4, "skill": "scripting"},
+      {"step": 5, "action": "feedback_check"},
+      {"step": 6, "action": "output_final"}
+    ],
+    "error_handling": {
+      "on_validation_fail": "go_back_to_previous_skill",
+      "max_retries": 3
+    }
+  },
+
+  "meta_prompt_template": "당신은 PPT 생성 전문가입니다. 다음 하네스를 사용하여 고품질의 PPT 구조를 생성하세요.\n\n**주제**: {{topic}}\n**원문 데이터**: {{raw_content}}\n\n**규칙(Rules)**:\n{{rules}}\n\n**스킬(Skills)**:\n{{skills}}\n\n**피드백(Feedback)**:\n{{feedback}}\n\n위 규칙과 스킬을 순서대로 실행하고, 피드백 체크리스트를 통과한 최종 결과물만 출력하세요."
+}
