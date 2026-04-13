@@ -122,7 +122,7 @@ def get_2grams(text):
 
     grams = set()
     for i in range(len(words) - 1):
-        grams.add(tuple(sorted([words[i], words[i+1]]))
+        grams.add(tuple(sorted([words[i], words[i+1]])))
 
     return grams
 
