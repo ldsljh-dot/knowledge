@@ -791,7 +791,7 @@ if [ -n "$ANTHROPIC_API_KEY" ]; then
   python3 "$AGENT_ROOT/knowledge/.gemini/skills/mem0-memory/scripts/memory_save.py" \
     --content "{PROJECT_NAME}/{SELECTED_LAYER} 코드 분석 완료 ({TODAY}). 분석 깊이: {DEPTH}. 핵심 클래스: {CLASS_ANALYSIS_SUMMARY}. 저장 경로: {CATEGORY}/$SAFE_LAYER/" \
     --agent "claude" \
-    --metadata "{\"workflow\": \"code_analyze\", \"project\": \"{PROJECT_NAME}\", \"layer\": \"{SELECTED_LAYER}\", \"depth\": \"{DEPTH}\", \"category\": \"{CATEGORY}\", \"date\": \"{TODAY}\"}"
+    --metadata "{\"workflow\": \"code_analyze\", \"project\": \"{PROJECT_NAME}\", \"layer\": \"{SELECTED_LAYER}\", \"depth\": \"{DEPTH}\", \"category\": \"{CATEGORY}\", \"topic\": \"{SELECTED_LAYER}\", \"obsidian_path\": \"{CATEGORY}/$SAFE_LAYER\", \"date\": \"{TODAY}\"}"
   echo "✅ Mem0 저장 완료"
 else
   echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 저장 건너뜀"
@@ -816,7 +816,7 @@ if ($env:ANTHROPIC_API_KEY) {
     $TODAY = Get-Date -Format "yyyy-MM-dd"
     $SAFE_LAYER = "{SELECTED_LAYER}" -replace '[ /]', '_'
     $memContent = "{PROJECT_NAME}/{SELECTED_LAYER} 코드 분석 완료 ($TODAY). 분석 깊이: {DEPTH}. 핵심 클래스: {CLASS_ANALYSIS_SUMMARY}. 저장 경로: {CATEGORY}/$SAFE_LAYER/"
-    $memMeta = "{`"workflow`": `"code_analyze`", `"project`": `"{PROJECT_NAME}`", `"layer`": `"{SELECTED_LAYER}`", `"depth`": `"{DEPTH}`", `"category`": `"{CATEGORY}`", `"date`": `"$TODAY`"}"
+    $memMeta = "{`"workflow`": `"code_analyze`", `"project`": `"{PROJECT_NAME}`", `"layer`": `"{SELECTED_LAYER}`", `"depth`": `"{DEPTH}`", `"category`": `"{CATEGORY}`", `"topic`": `"{SELECTED_LAYER}`", `"obsidian_path`": `"{CATEGORY}/$SAFE_LAYER`", `"date`": `"$TODAY`"}"
     python "$env:AGENT_ROOT/knowledge/.gemini/skills/mem0-memory/scripts/memory_save.py" `
       --content "$memContent" `
       --agent "claude" `

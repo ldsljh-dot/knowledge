@@ -88,6 +88,11 @@ def main():
         sys.exit(1)
     metadata["agent"] = args.agent
 
+    # obsidian_path 자동 파생 (topic + category가 있으면)
+    if "obsidian_path" not in metadata and "topic" in metadata and "category" in metadata:
+        from utils import safe_filename
+        metadata["obsidian_path"] = f"{metadata['category']}/{safe_filename(metadata['topic'])}"
+
     # SQLite 스레드 제한 우회 (Mem0 내부 history.db 호환성)
     import sqlite3 as _sqlite3
     _orig_connect = _sqlite3.connect

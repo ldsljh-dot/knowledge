@@ -37,3 +37,14 @@ rag_result_*.txt
 *.db-wal
 zi7r9p7p
 zihNUVEK
+
+# Node (pptxgenjs is bundled / used via CDN)
+node_modules/
+package.json
+package-lock.json
+
+# Generated slides output
+slides/
+
+# ppt-harness temp
+.gemini/skills/ppt-harness/temp/

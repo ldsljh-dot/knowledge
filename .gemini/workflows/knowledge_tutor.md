@@ -182,6 +182,35 @@ if ($env:ANTHROPIC_API_KEY) {
 
 사용자의 답변을 `{TOPIC}` 변수에 저장합니다.
 
+---
+
+#### Step 1-1b: 소스 코드 질문 감지 → Code Analyze 연동 ⭐
+
+주제를 분석하여 **특정 코드베이스의 소스 코드 동작**에 관한 학습인지 판단합니다.
+
+**감지 조건** (하나라도 해당하면 코드 학습으로 판단):
+- 함수명 · 클래스명 · 메서드명 등 코드 식별자를 포함
+- 소스 파일 경로 또는 확장자(`.py`, `.cpp`, `.h` 등) 언급
+- "구현 방법", "내부 동작", "소스 코드 분석", "어떻게 동작하는지" 등 구현 수준 학습
+- 특정 로컬 프로젝트의 코드 로직/아키텍처 이해가 목적
+
+**판단 후 분기:**
+
+| 상황 | 처리 |
+|------|------|
+| 코드 학습 + Code_Analysis RAG 있음 | 해당 RAG를 `OUTPUT_DIR`로 사용, Step 1-6(manifest 재생성) 후 Phase 2 진행 |
+| 코드 학습 + Code_Analysis RAG **없음** | 아래 안내 후 사용자 확인 |
+| 일반 지식 학습 | 감지 단계 건너뜀, 정상 진행 |
+
+**Code_Analysis RAG 없음 시 자동 실행:**
+
+> **"🔍 소스 코드 동작에 관한 학습이 감지되었습니다.**
+> 코드 분석 자료가 없으므로 `code_analyze`를 자동으로 실행하여 분석 결과를 축적합니다."
+
+`/code_analyze` 워크플로우를 실행합니다. 완료 후 생성된 RAG manifest를 `OUTPUT_DIR`로 사용하여 자동으로 Phase 2 튜터링으로 복귀합니다.
+
+---
+
 다음으로 PARA 폴더 구조를 출력합니다:
 
 <tabs>
@@ -801,13 +830,22 @@ updated: 2026-03-10
 created: 2026-03-10
 updated: 2026-03-10
 
-### Step 2-5: 자동 추가 검색 (신뢰도 낮을 때)
+### Step 2-5: 자동 보강 (신뢰도 낮을 때)
 
-답변 출력 직후, RAG 신뢰도를 확인합니다:
-- **신뢰도 < 20% (🔴)**: 사용자에게 묻지 않고 자동으로 아래 검색 실행
-- **신뢰도 ≥ 20%**: 이 단계 건너뜀 → Step 2-6으로
+답변 출력 직후, RAG 신뢰도와 질문 유형을 동시에 확인합니다:
 
-**자동 실행 조건 충족 시 흐름:**
+| 조건 | 처리 |
+|------|------|
+| 신뢰도 < 50% + **코드 질문** 감지 | `code_analyze` 자동 실행 → RAG 갱신 → Step 2-2로 복귀 |
+| 신뢰도 < 20% + 일반 질문 | Tavily 추가 웹 검색 자동 실행 → Step 2-2로 복귀 |
+| 신뢰도 ≥ 20% (일반) / ≥ 50% (코드) | 이 단계 건너뜀 → Step 2-6으로 |
+
+**코드 질문 + 신뢰도 < 50% 시 자동 실행:**
+> "🔍 코드 관련 질문이며 RAG 신뢰도가 낮습니다. `code_analyze`를 자동으로 실행하여 분석 결과를 축적합니다..."
+
+`/code_analyze` 워크플로우를 실행합니다. 완료 후 생성된 RAG manifest를 `OUTPUT_DIR`에 추가하여 Step 2-2-b로 복귀합니다.
+
+**일반 질문 + 신뢰도 < 20% 시 자동 실행:**
 > "⚡ 신뢰도가 너무 낮아 자동으로 추가 자료를 검색합니다..."
 
 검색 쿼리: 현재 사용자 질문(`{USER_QUESTION}`)의 핵심 키워드를 영어로 변환하여 사용
@@ -1077,7 +1115,7 @@ if [ -n "$ANTHROPIC_API_KEY" ]; then
   python "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_save.py" \
     --content "{CATEGORY}/{TOPIC} 학습 완료. 핵심 요약: {핵심_요약_SUMMARY}. 미해결: {UNRESOLVED}" \
     --agent "claude" \
-    --metadata "{\"workflow\": \"knowledge_tutor\", \"topic\": \"{TOPIC}\", \"category\": \"{CATEGORY}\"}"
+    --metadata "{\"workflow\": \"knowledge_tutor\", \"topic\": \"{TOPIC}\", \"category\": \"{CATEGORY}\", \"obsidian_path\": \"{CATEGORY}/{SAFE_TOPIC}\"}"
 else
   echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 저장 건너뜀"
 fi
@@ -1091,7 +1129,7 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 if ($env:ANTHROPIC_API_KEY) {
     $memContent = "{CATEGORY}/{TOPIC} 학습 완료. 핵심 요약: {핵심_요약_SUMMARY}. 미해결: {UNRESOLVED}"
-    $memMeta = '{"workflow": "knowledge_tutor", "topic": "{TOPIC}", "category": "{CATEGORY}"}'
+    $memMeta = '{"workflow": "knowledge_tutor", "topic": "{TOPIC}", "category": "{CATEGORY}", "obsidian_path": "{CATEGORY}/{SAFE_TOPIC}"}'
     python "$env:AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_save.py" `
       --content "$memContent" `
       --agent "claude" `

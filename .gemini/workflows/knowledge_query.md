@@ -733,6 +733,35 @@ print(','.join(dirs))
 
 이전 학습 기록이 있었다면 (`PREV_NOTES_FOUND=true`), 다음과 같이 구체적인 제안을 추가합니다:
 
+---
+
+### Step 2-1b: 소스 코드 질문 감지 → Code Analyze 자동 연동 ⭐
+
+질문을 분석하여 **특정 코드베이스의 소스 코드 동작**에 관한 질문인지 판단합니다.
+
+**감지 조건** (하나라도 해당하면 코드 질문으로 판단):
+- 함수명 · 클래스명 · 메서드명 등 코드 식별자를 포함 (예: `Simulator`, `forward()`, `__init__`)
+- 소스 파일 경로 또는 확장자(`.py`, `.cpp`, `.h`, `.go` 등) 언급
+- "어떻게 구현", "내부 동작", "소스 코드에서", "실제 코드", "어떤 함수가" 등 구현 수준 질문
+- 특정 프로젝트의 로직/알고리즘 동작 방식 (예: "TOGSim이 이벤트를 어떻게 처리하는지")
+
+**판단 후 분기:**
+
+| 상황 | 처리 |
+|------|------|
+| 코드 질문 + 관련 RAG 있음 (Code_Analysis 포함) | 해당 RAG로 Step 2-2 진행 |
+| 코드 질문 + 관련 RAG **없음** | `code_analyze` 스킬 **자동 실행** → 완료 후 Step 2-2 |
+| 일반 지식 질문 | 이 단계 건너뜀, Step 2-2 정상 진행 |
+
+**Code_Analysis RAG 없음 시 자동 실행:**
+
+> **"🔍 소스 코드 동작에 관한 질문이 감지되었습니다.**
+> 관련 코드 분석 자료가 없으므로 `code_analyze`를 자동으로 실행하여 분석 결과를 축적합니다."
+
+`code_analyze` 스킬을 호출하여 관련 Layer를 분석합니다. 완료 후 생성된 RAG manifest를 사용해 자동으로 Step 2-2로 복귀합니다.
+
+---
+
 ```
 💡 이전에 배운 내용을 바탕으로 이어서 배울 수 있는 주제 예시:
   - [이전 세션에서 언급됐지만 깊이 다루지 않은 개념들]
@@ -871,6 +900,26 @@ score_grade:
 
 ---
 
+### Step 2-3b: 코드 질문 + 낮은 신뢰도 → Code Analyze 자동 실행 ⭐
+
+Step 2-3에서 신뢰도를 계산한 직후, 아래 두 조건을 동시에 확인합니다:
+
+| 조건 | 내용 |
+|------|------|
+| 신뢰도 < 50% | 🟠 낮음 또는 🔴 매우 낮음 |
+| 코드 질문 감지 | Step 2-1b의 감지 조건 중 하나 해당 |
+
+**두 조건 모두 충족 시 자동 실행:**
+
+> **"⚡ 코드 관련 질문이며 RAG 신뢰도가 낮습니다.**
+> `code_analyze`를 자동으로 실행하여 코드 분석 결과를 축적합니다."
+
+`/code_analyze` 워크플로우를 실행합니다. 완료 후 생성된 RAG manifest를 `SOURCE_DIRS`에 추가하여 Step 2-2로 복귀합니다.
+
+**한 조건만 충족 시:** 이 단계 건너뜀 → Step 2-4로 진행
+
+---
+
 ### Step 2-4: 청크 기반 심층 답변 생성 (Detailed Synthesis)
 
 검색된 청크를 내부 컨텍스트로 활용하여 다음 규칙으로 답변을 생성합니다. 단순한 1~2문장의 답변이 아니라, 전문가가 기존 지식을 재해석하여 **논문/리포트 수준의 상세한 구조화된 답변**을 작성해야 합니다.
@@ -915,11 +964,10 @@ score_grade:
 ```
 [계속]    다른 질문을 입력하세요.
 [범위]    다른 Layer(폴더)도 추가로 검색할까요? (현재: {topic})
-[분석]    신뢰도가 낮거나 세부 구현이 궁금하면 → "소스 찾아봐" 로 현재 세션에서만 실시간 코드 탐색
-[갱신]    영구적인 지식베이스 보강이 필요하면 → `/code_analyze` 실행 권장
+[심화]    더 깊은 코드 분석이 필요하면 → "딥다이브" 로 code_analyze 재실행 + RAG 보강
 [종료]    'exit' 또는 '종료'
 ```
-> ⚠️ **"⚡ 요약된 문서에 해당 내용이 부족합니다. '소스 찾아봐'라고 입력하시면 실제 로컬 코드를 일회성으로 탐색하여 답변해 드립니다. 코드 구조 변경을 영구적으로 반영하려면 `/code_analyze` 워크플로우를 실행해 주세요."**
+> ℹ️ **신뢰도 < 50% + 코드 질문 시**: Step 2-3b에서 `code_analyze`가 자동으로 실행되어 분석 결과가 RAG에 축적됩니다.
 
 ---
 
@@ -1021,21 +1069,23 @@ if ($LASTEXITCODE -ne 0) {
    ```
 3. 개선된 신뢰도로 답변을 갱신
 
-#### 분기 B: Code Deep Dive (실시간 코드 탐색 및 가이드)
+#### 분기 B: Code Deep Dive (code_analyze 자동 실행 + RAG 보강) ⭐
 **조건:** 카테고리가 `Code_Analysis` 하위이고, 사용자가 `소스 찾아봐`, `딥다이브`, `실제 코드 확인` 등을 입력한 경우.
 
 **실행 흐름:**
-1. **일회성 로컬 코드 탐색 (Read-Only)**: 
-   AI 에이전트(LLM)는 질문과 관련된 실제 로컬 소스 코드(`*.py`, `*.cpp` 등)를 내장 도구(`grep_search`, `read_file`, `glob` 등)를 활용해 직접 탐색합니다.
-2. **실시간 답변 제공**:
-   탐색한 코드를 바탕으로 사용자의 질문에 상세히 답변합니다. (이때 옵시디언의 마크다운 RAG 소스 파일을 임의로 수정하거나 덮어쓰지 않습니다.)
-3. **지식베이스 갱신 안내 (Strict Guide)**:
-   답변을 제공한 직후, RAG 지식베이스(옵시디언)의 정보가 최신 상태가 아니거나 누락되어 있음을 알리고, 영구적인 지식 동기화를 위해 사용자가 직접 `/code_analyze` 워크플로우를 실행하도록 명확히 안내합니다.
-   
-   **예시 출력:**
-   > "탐색한 결과, 해당 구현은 `TOGSim/src/Simulator.cc`에 다음과 같이 정의되어 있습니다: ... 
-   > 
-   > ⚠️ **안내**: 현재 RAG 지식베이스에는 이 최신 코드 구조가 반영되어 있지 않습니다. 옵시디언의 문서 및 RAG 인덱스를 영구적으로 갱신하려면, 질의응답을 마친 후 터미널에서 `/code_analyze`를 실행하여 해당 Layer의 지식을 최신화해 주세요."
+
+> **"🔍 코드 심화 분석 요청이 감지되었습니다.**
+> `code_analyze`를 실행하여 관련 Layer를 분석하고 결과를 RAG에 축적합니다."
+
+1. **`/code_analyze` 워크플로우 실행**: 현재 질문과 관련된 코드베이스 Layer를 분석합니다.
+2. **RAG manifest 갱신**: 완료 후 생성된 분석 문서가 `SOURCE_DIRS`에 자동 추가됩니다.
+3. **Step 2-2로 복귀**: 갱신된 RAG로 동일 질문을 재검색하여 답변합니다.
+
+완료 후 신뢰도 변화를 표시합니다:
+```
+🔄 코드 분석 완료: {분석된_Layer} 문서 추가됨
+신뢰도 변화: {이전_신뢰도}% → {새_신뢰도}%
+```
 
 ---
 
@@ -1273,7 +1323,7 @@ if [ -n "$ANTHROPIC_API_KEY" ]; then
   python "$AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_save.py" \
     --content "{TOPIC} Q&A 세션. 주요 질문: {핵심_질문_목록}. 핵심 답변 요약: {핵심_포인트_SUMMARY}" \
     --agent "claude" \
-    --metadata "{\"workflow\": \"knowledge_query\", \"topic\": \"{TOPIC}\"}"
+    --metadata "{\"workflow\": \"knowledge_query\", \"topic\": \"{TOPIC}\", \"category\": \"{CATEGORY}\", \"obsidian_path\": \"{CATEGORY}/{SAFE_TOPIC}\"}"
 else
   echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 저장 건너뜀"
 fi
@@ -1287,7 +1337,7 @@ if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
 
 if ($env:ANTHROPIC_API_KEY) {
     $memContent = "{TOPIC} Q&A 세션. 주요 질문: {핵심_질문_목록}. 핵심 답변 요약: {핵심_포인트_SUMMARY}"
-    $memMeta = '{"workflow": "knowledge_query", "topic": "{TOPIC}"}'
+    $memMeta = '{"workflow": "knowledge_query", "topic": "{TOPIC}", "category": "{CATEGORY}", "obsidian_path": "{CATEGORY}/{SAFE_TOPIC}"}'
     python "$env:AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_save.py" `
       --content "$memContent" `
       --agent "claude" `
@@ -1301,7 +1351,32 @@ if ($env:ANTHROPIC_API_KEY) {
 </tabs>
 
 
-### Step 3-4: log.md 기록
+### Step 3-4: Vault Index 자동 갱신
+
+새 위키 페이지가 저장되었으므로 Vault Index를 갱신합니다.
+
+<tabs>
+<tab label="Linux/macOS (Bash)">
+
+```bash
+if [ -f .env ]; then set -a; source .env; set +a; fi
+if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
+
+python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py"
+```
+
+</tab>
+<tab label="Windows (PowerShell)">
+
+```powershell
+if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
+python "$env:AGENT_ROOT\.gemini\skills\vault-index\scripts\vault_index.py"
+```
+
+</tab>
+</tabs>
+
+### Step 3-5: log.md 기록
 
 세션 완료 후 `$OBSIDIAN_VAULT_PATH/log.md`에 한 줄 추가합니다.
 
