@@ -48,3 +48,6 @@ slides/
 
 # ppt-harness temp
 .gemini/skills/ppt-harness/temp/
+
+# Claude CLI config
+.claude/*.json
