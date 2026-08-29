@@ -23,9 +23,6 @@ Qdrant 벡터 인덱스(`obsidian_vault_index` 컬렉션)를 갱신합니다.
 
 ## Step 1: 환경 확인
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -36,29 +33,6 @@ if [ -z "$OBSIDIAN_VAULT_PATH" ]; then
   exit 1
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-if (-not $env:OBSIDIAN_VAULT_PATH) {
-    Write-Host "❌ OBSIDIAN_VAULT_PATH가 설정되지 않았습니다. .env 파일을 확인하세요."
-    exit 1
-}
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Step 2: 인덱스 갱신
@@ -66,65 +40,26 @@ if (-not $env:OBSIDIAN_VAULT_PATH) {
 사용자가 지정한 옵션에 따라 아래 중 하나를 실행합니다.
 
 **기본 (incremental):** 옵션 없이 실행
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-python "$env:AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py"
-```
-
-</tab>
-</tabs>
-
 **전체 재빌드:** 사용자가 `--full` 지정 시
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py" --full
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-python "$env:AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py" --full
-```
-
-</tab>
-</tabs>
-
 **대상 미리 확인:** 사용자가 `--dry-run` 지정 시
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py" --dry-run
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-python "$env:AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py" --dry-run
-```
-
-</tab>
-</tabs>
-
 결과 예시:
 ```
 [INFO] Vault: /Users/xxx/Obsidian
@@ -136,7 +71,6 @@ python "$env:AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py" --dry
    신규: 3개 | 업데이트: 1개 | 삭제: 0개 | 스킵: 28개
    총 인덱스: 32개 폴더
 ```
-
 스크립트 실패 시(`exit code != 0`):
 - `qdrant-client` 또는 `sentence-transformers` 미설치 → `pip3 install qdrant-client sentence-transformers` 실행 후 재시도
 - `OBSIDIAN_VAULT_PATH` 미설정 → Step 1 재확인

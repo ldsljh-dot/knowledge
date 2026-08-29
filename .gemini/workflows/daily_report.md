@@ -16,9 +16,6 @@ Obsidian vault의 특정 날짜 변경사항을 git log와 실제 파일 내용�
 
 ### Step 1-1: 환경변수 로드 및 vault 경로 검증
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -57,56 +54,6 @@ else
   echo "⚠️ Git 저장소가 아닙니다. frontmatter 기반 분석만 수행합니다."
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-Write-Host "AGENT_ROOT: $env:AGENT_ROOT"
-Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
-
-$VAULT_PATH = $env:OBSIDIAN_VAULT_PATH
-
-if (-not (Test-Path $VAULT_PATH)) {
-    Write-Host "⚠️ OBSIDIAN_VAULT_PATH 경로가 존재하지 않습니다: $VAULT_PATH"
-    foreach ($CANDIDATE in @("$env:USERPROFILE\Obsidian", "C:\Obsidian")) {
-        if (Test-Path $CANDIDATE) {
-            Write-Host "→ Fallback 경로 사용: $CANDIDATE"
-            $VAULT_PATH = $CANDIDATE
-            break
-        }
-    }
-}
-
-if (-not (Test-Path $VAULT_PATH)) {
-    Write-Host "❌ Vault 경로를 찾을 수 없습니다."
-    exit 1
-}
-
-Write-Host "✅ Vault 경로: $VAULT_PATH"
-
-if (Test-Path "$VAULT_PATH\.git") {
-    $GIT_AVAILABLE = $true
-    Write-Host "✅ Git 저장소 확인됨"
-} else {
-    $GIT_AVAILABLE = $false
-    Write-Host "⚠️ Git 저장소가 아닙니다. frontmatter 기반 분석만 수행합니다."
-}
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Phase 2: 리포트 날짜 확정 (대화형)
@@ -120,13 +67,9 @@ if (Test-Path "$VAULT_PATH\.git") {
    (기본값: 오늘, Enter로 오늘 날짜 사용)
    형식: YYYY-MM-DD  예) 2026-02-28
 ```
-
 사용자 입력이 없으면 오늘 날짜를 사용합니다.
 
 ### Step 2-2: 날짜 설정 및 기존 리포트 확인
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 REPORT_DATE="${USER_INPUT:-$(date +%Y-%m-%d)}"
@@ -141,33 +84,11 @@ if [ -f "$REPORT_FILE" ]; then
   echo "   $REPORT_FILE"
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if ($USER_INPUT) { $REPORT_DATE = $USER_INPUT } else { $REPORT_DATE = Get-Date -Format "yyyy-MM-dd" }
-$REPORT_TIME = Get-Date -Format "HH:mm"
-Write-Host "📅 리포트 대상 날짜: $REPORT_DATE"
-
-$DAILY_DIR = "$VAULT_PATH\0-Dashboard\Daily"
-$REPORT_FILE = "$DAILY_DIR\${REPORT_DATE}.md"
-
-if (Test-Path $REPORT_FILE) {
-    Write-Host "⚠️ 이미 해당 날짜의 리포트가 존재합니다:"
-    Write-Host "   $REPORT_FILE"
-}
-```
-
-</tab>
-</tabs>
-
 기존 리포트가 있을 경우 **[Agent Action]** 사용자에게 확인합니다:
 
 ```
 ❓ 기존 리포트를 덮어쓰시겠습니까? (y = 덮어쓰기 / n = 취소)
 ```
-
 `n` 입력 시 워크플로우를 종료합니다.
 
 ---
@@ -177,9 +98,6 @@ if (Test-Path $REPORT_FILE) {
 ### Step 3-1: 해당 날짜 신규 파일 목록 수집
 
 `GIT_AVAILABLE=true`인 경우 실행합니다. 단순 이동(R)은 제외하고 **실제로 새로운 내용이 추가된 파일(A, M)**에 집중합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ "$GIT_AVAILABLE" = "true" ]; then
@@ -204,52 +122,11 @@ else
   echo "⏭️ Git 미사용 — frontmatter 기반 분석으로 진행합니다."
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if ($GIT_AVAILABLE) {
-    Write-Host "=== GIT LOG: 커밋 목록 ==="
-    git -C "$VAULT_PATH" log `
-      --after="${REPORT_DATE} 00:00:00" `
-      --before="${REPORT_DATE} 23:59:59" `
-      --name-status `
-      --pretty=format:"=== COMMIT %h ===%n%s%n(%ai)" `
-      -- "*.md" 2>$null
-
-    Write-Host ""
-    Write-Host "=== GIT STAT: 변경 통계 ==="
-    git -C "$VAULT_PATH" log `
-      --after="${REPORT_DATE} 00:00:00" `
-      --before="${REPORT_DATE} 23:59:59" `
-      --shortstat `
-      -- "*.md" 2>$null
-
-    Write-Host ""
-    Write-Host "=== GIT DIFF: 변경 내용 (최대 600줄) ==="
-    git -C "$VAULT_PATH" log `
-      --after="${REPORT_DATE} 00:00:00" `
-      --before="${REPORT_DATE} 23:59:59" `
-      -p --unified=3 `
-      --diff-filter=AM `
-      -- "*.md" 2>$null | Select-Object -First 600
-} else {
-    Write-Host "⏭️ Git 미사용 — frontmatter 기반 분석으로 진행합니다."
-}
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Phase 4: Frontmatter 교차 확인
 
 git 미추적 파일이나 수동 편집 파일을 보완하기 위해 frontmatter의 날짜 필드를 검색합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 echo "=== FRONTMATTER: created=${REPORT_DATE} ==="
@@ -265,30 +142,6 @@ grep -rl "updated: ${REPORT_DATE}" "$VAULT_PATH" \
   | grep -v "0-Dashboard" \
   | sort
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-Write-Host "=== FRONTMATTER: created=${REPORT_DATE} ==="
-Get-ChildItem -Path "$VAULT_PATH" -Recurse -Filter "*.md" |
-    Where-Object { $_.FullName -notmatch "0-Dashboard" } |
-    Select-String -Pattern "created: $REPORT_DATE" |
-    Select-Object -ExpandProperty Path |
-    Sort-Object
-
-Write-Host ""
-Write-Host "=== FRONTMATTER: updated=${REPORT_DATE} ==="
-Get-ChildItem -Path "$VAULT_PATH" -Recurse -Filter "*.md" |
-    Where-Object { $_.FullName -notmatch "0-Dashboard" } |
-    Select-String -Pattern "updated: $REPORT_DATE" |
-    Select-Object -ExpandProperty Path |
-    Sort-Object
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Phase 5: 핵심 파일 내용 읽기
@@ -308,9 +161,6 @@ Phase 3에서 수집한 신규·수정 파일 목록 중 **내용이 실질적�
 - 단순 rename된 파일 (내용 변경 없음)
 - 파일 수가 많을 경우 각 카테고리별 대표 파일 1~2개만 읽기
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 # 읽을 파일 예시 (Agent가 위 우선순위로 판단해 선택)
 PRIORITY_FILES=$(git -C "$VAULT_PATH" log \
@@ -327,27 +177,6 @@ PRIORITY_FILES=$(git -C "$VAULT_PATH" log \
 
 echo "$PRIORITY_FILES"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-$PRIORITY_FILES = git -C "$VAULT_PATH" log `
-  --after="${REPORT_DATE} 00:00:00" `
-  --before="${REPORT_DATE} 23:59:59" `
-  --diff-filter=AM `
-  --name-only `
-  --pretty=format: `
-  -- "*.md" 2>$null |
-  Where-Object { $_ -ne "" -and $_ -notmatch "0-Dashboard" -and $_ -notmatch "sources/.*\d{4}-\d{2}-\d{2}\.md" } |
-  Sort-Object -Unique
-
-$PRIORITY_FILES
-```
-
-</tab>
-</tabs>
-
 **[Agent Action]** 위 목록에서 우선순위에 따라 핵심 파일들을 Read 툴로 읽어 내용을 파악합니다.
 
 ---
@@ -372,7 +201,6 @@ $PRIORITY_FILES
 📭 {REPORT_DATE} 날짜의 변경사항이 없습니다.
    리포트를 생성하지 않습니다.
 ```
-
 **리포트 형식:**
 
 ```markdown
@@ -406,7 +234,6 @@ type: daily-report
 ## 📅 내일 이어갈 작업 제안
 1. {오늘 작업의 자연스러운 후속 작업}
 ```
-
 > 해당 날짜에 업무/연구/논문/개발 중 없는 섹션은 생략합니다.
 
 합성된 리포트를 `REPORT_CONTENT` 변수에 보관합니다.
@@ -416,9 +243,6 @@ type: daily-report
 ## Phase 6: 리포트 저장
 
 ### Step 6-1: 파일 저장
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 mkdir -p "$DAILY_DIR"
@@ -437,29 +261,6 @@ else
   exit 1
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-New-Item -ItemType Directory -Force -Path "$DAILY_DIR" | Out-Null
-Set-Content -Path "$REPORT_FILE" -Value $REPORT_CONTENT -Encoding UTF8
-
-if ($?) {
-    Write-Host "✅ 리포트 저장 완료!"
-    Write-Host "   📄 $REPORT_FILE"
-    Write-Host ""
-    Write-Host "--- 저장된 리포트 미리보기 (처음 30줄) ---"
-    Get-Content "$REPORT_FILE" | Select-Object -First 30
-} else {
-    Write-Host "❌ 파일 저장 중 오류가 발생했습니다."
-    exit 1
-}
-```
-
-</tab>
-</tabs>
-
 ### Step 6-2: 완료 안내
 
 ```
@@ -473,7 +274,6 @@ Obsidian에서 확인하거나 아래 경로에서 열어보세요:
 
 💡 주간 리포트가 필요하다면 /weekly_report 를 실행하세요.
 ```
-
 ---
 
 ## Notes

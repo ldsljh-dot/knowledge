@@ -14,9 +14,6 @@ LLM이 텍스트를 직접 해석하는 대신 스크립트가 정확한 결과�
 
 ## Prerequisites
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -25,28 +22,6 @@ echo "AGENT_ROOT: $AGENT_ROOT"
 echo "OBSIDIAN_VAULT_PATH: $OBSIDIAN_VAULT_PATH"
 echo "DB: $OBSIDIAN_VAULT_PATH/Agent/personal.db"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-Write-Host "AGENT_ROOT: $env:AGENT_ROOT"
-Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Phase 1: 동작 선택
@@ -75,9 +50,6 @@ Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
 
 ### Step 2-1: 일정 조회
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
@@ -93,25 +65,6 @@ python "$AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" query \
 python "$AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" query \
   --keyword "{키워드}"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-# 특정 날짜 조회
-python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" query `
-  --date "{날짜}"
-
-# 기간 조회
-python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" query `
-  --from "{시작날짜}" --to "{종료날짜}"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ### Step 2-2: 일정 추가
@@ -124,9 +77,6 @@ python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" que
 - **태그** (선택, e.g. `work`, `meeting`)
 - **출처** (zeroclaw/openclaw/user)
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
@@ -138,33 +88,11 @@ python "$AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" add \
   --tags '["{태그1}","{태그2}"]' \
   --source "{출처}"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" add `
-  --title "{제목}" `
-  --start "{시작일시}" `
-  --end "{종료일시}" `
-  --location "{장소}" `
-  --tags '["{태그1}","{태그2}"]' `
-  --source "{출처}"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ### Step 2-3: 일정 수정
 
 먼저 수정할 일정을 조회하여 ID를 확인합니다 (Step 2-1 참조).
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -175,21 +103,6 @@ python "$AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" update 
   --start "{새_시작일시}" \
   --location "{새_장소}"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" update `
-  --id "{ID}" `
-  --title "{새_제목}"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ### Step 2-4: 일정 삭제
@@ -198,35 +111,15 @@ python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" upd
 
 > ⚠️ **삭제 전 확인**: 사용자에게 조회 결과를 보여주고 삭제 의사를 재확인합니다.
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 python "$AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" delete \
   --id "{ID}"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_events.py" delete `
-  --id "{ID}"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ### Step 2-5: 메모 검색
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -239,20 +132,6 @@ python "$AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_memos.py" search \
 python "$AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_memos.py" search \
   --tag "{태그}"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_memos.py" search `
-  --keyword "{키워드}"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ### Step 2-6: 메모 추가
@@ -263,9 +142,6 @@ python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_memos.py" sear
 - **태그** (선택)
 - **출처** (zeroclaw/openclaw/user)
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
@@ -275,31 +151,11 @@ python "$AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_memos.py" add \
   --tags '["{태그1}"]' \
   --source "{출처}"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_memos.py" add `
-  --title "{제목}" `
-  --content "{내용}" `
-  --tags '["{태그1}"]' `
-  --source "{출처}"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ### Step 2-7: 메모 수정
 
 먼저 수정할 메모를 검색하여 ID를 확인합니다 (Step 2-5 참조).
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -308,29 +164,11 @@ python "$AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_memos.py" update \
   --id "{ID}" \
   --content "{새_내용}"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_memos.py" update `
-  --id "{ID}" `
-  --content "{새_내용}"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ### Step 2-8: 메모 삭제
 
 > ⚠️ **삭제 전 확인**: 사용자에게 검색 결과를 보여주고 삭제 의사를 재확인합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -338,20 +176,6 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 python "$AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_memos.py" delete \
   --id "{ID}"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-python "$env:AGENT_ROOT/.gemini/skills/personal-db/scripts/manage_memos.py" delete `
-  --id "{ID}"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Phase 3: 결과 출력

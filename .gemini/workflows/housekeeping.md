@@ -15,9 +15,6 @@ Obsidian Vault의 지식 상태를 점검하고 유지보수합니다.
 
 ## Prerequisites
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -25,73 +22,23 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 echo "OBSIDIAN_VAULT_PATH: $OBSIDIAN_VAULT_PATH"
 echo "ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:0:8}..."
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
-if ($env:ANTHROPIC_API_KEY) { Write-Host "ANTHROPIC_API_KEY: $($env:ANTHROPIC_API_KEY.Substring(0,8))...." }
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Phase 1: 고아 정리 (Orphan Cleanup)
 
 ### Step 1-1: 현재 상태 확인 (Dry Run)
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/sync_clean.py"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-python "$env:AGENT_ROOT\.gemini\skills\vault-index\scripts\sync_clean.py"
-```
-
-</tab>
-</tabs>
-
 ### Step 1-2: 실제 정리 실행 여부 확인
 
 LLM Agent는 사용자에게 위 dry-run 결과를 요약하여 보여주고, 삭제를 진행할지 묻습니다.
 사용자가 동의하면 아래 명령을 실행합니다. (동의하지 않으면 Phase 2로 바로 넘어갑니다.)
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/sync_clean.py" --execute
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-python "$env:AGENT_ROOT\.gemini\skills\vault-index\scripts\sync_clean.py" --execute
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Phase 2: 미편입 지식 탐색 (Discovery & Integration)
@@ -100,23 +47,9 @@ python "$env:AGENT_ROOT\.gemini\skills\vault-index\scripts\sync_clean.py" --exec
 
 Knowledge Engine 시스템을 통하지 않고 Obsidian에 수동으로 생성된 유효한 지식(노트) 폴더들을 찾습니다.
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/sync_clean.py" --discover --json
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-python "$env:AGENT_ROOT\.gemini\skills\vault-index\scripts\sync_clean.py" --discover --json
-```
-
-</tab>
-</tabs>
-
 ### Step 2-2: 사용자 선택 및 편입 작업
 
 LLM Agent는 위에서 출력된 JSON 목록을 파싱하여 사용자에게 **편입할 폴더를 복수 선택**하도록 제안합니다.
@@ -126,9 +59,6 @@ LLM Agent는 위에서 출력된 JSON 목록을 파싱하여 사용자에게 **�
 
 *(아래 스크립트에서 `$TOPIC_PATH`를 사용자가 선택한 폴더의 전체 경로(예: `1-Projects/MyTopic`)로 대체합니다.)*
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 # 1) RAG Manifest 생성
 python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" --topic "$(basename "$TOPIC_PATH")" --sources-dir "$OBSIDIAN_VAULT_PATH/$TOPIC_PATH"
@@ -136,22 +66,6 @@ python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" --
 # 2) Vault Indexing
 python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_index.py"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-# 1) RAG Manifest 생성
-$TopicName = Split-Path $TOPIC_PATH -Leaf
-python "$env:AGENT_ROOT\.gemini\skills\rag-retriever\scripts\create_manifest.py" --topic "$TopicName" --sources-dir "$env:OBSIDIAN_VAULT_PATH\$TOPIC_PATH"
-
-# 2) Vault Indexing
-python "$env:AGENT_ROOT\.gemini\skills\vault-index\scripts\vault_index.py"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Phase 3: 결과 요약

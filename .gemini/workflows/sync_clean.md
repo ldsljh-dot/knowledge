@@ -15,9 +15,6 @@ Obsidian Vault을 기준(Source of Truth)으로 Vault Index와 Mem0의 고아 �
 
 ## Prerequisites
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -25,49 +22,13 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 echo "OBSIDIAN_VAULT_PATH: $OBSIDIAN_VAULT_PATH"
 echo "ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:0:8}..."
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
-if ($env:ANTHROPIC_API_KEY) { Write-Host "ANTHROPIC_API_KEY: $($env:ANTHROPIC_API_KEY.Substring(0,8))..." }
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Step 1: dry-run으로 현재 상태 확인
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/sync_clean.py"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-python "$env:AGENT_ROOT\.gemini\skills\vault-index\scripts\sync_clean.py"
-```
-
-</tab>
-</tabs>
-
 dry-run 결과를 사용자에게 표시합니다:
 
 > **"🔍 3계층 동기화 분석 결과:**
@@ -85,23 +46,9 @@ dry-run 결과를 사용자에게 표시합니다:
 
 사용자가 `yes`를 입력하면:
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/sync_clean.py" --execute
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-python "$env:AGENT_ROOT\.gemini\skills\vault-index\scripts\sync_clean.py" --execute
-```
-
-</tab>
-</tabs>
-
 사용자가 `no`를 입력하면 종료합니다.
 
 ---
@@ -112,23 +59,9 @@ python "$env:AGENT_ROOT\.gemini\skills\vault-index\scripts\sync_clean.py" --exec
 
 > **"기존 Mem0 기억에 obsidian_path를 보강하시겠습니까? (yes/no)"**
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 python3 "$AGENT_ROOT/.gemini/skills/vault-index/scripts/sync_clean.py" --backfill
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-python "$env:AGENT_ROOT\.gemini\skills\vault-index\scripts\sync_clean.py" --backfill
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## 완료 메시지

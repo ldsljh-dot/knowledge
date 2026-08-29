@@ -4,8 +4,6 @@ updated: 2026-03-10
 description: 세미나 중 질문/의견을 실시간으로 캡처하고 RAG로 맥락을 보강하여 Obsidian에 저장하는 Hybrid 워크플로우
 trigger: /myseminar
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 # 🎙️ My Seminar Q&A Capture Workflow
 
@@ -18,15 +16,10 @@ updated: 2026-03-10
 세션 종료 시 미답 질문 목록과 후속 연구 제안을 생성합니다.
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Phase 1: 환경 설정 및 세미나 정보 입력
 
 ### Step 1-1: 환경 점검
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -37,33 +30,6 @@ echo "OBSIDIAN_VAULT_PATH: $OBSIDIAN_VAULT_PATH"
 
 python3 -c "import rank_bm25" 2>/dev/null || { echo "📦 Installing dependencies..."; pip install -r "$AGENT_ROOT/requirements.txt"; }
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-Write-Host "AGENT_ROOT: $env:AGENT_ROOT"
-Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
-
-try { python -c "import rank_bm25" *>$null } catch {
-    Write-Host "📦 Installing dependencies..."
-    pip install -r "$env:AGENT_ROOT\requirements.txt"
-}
-```
-
-</tab>
-</tabs>
-
 ### Step 1-2: 세미나 정보 입력 (대화형)
 
 사용자에게 아래 정보를 순서대로 질문합니다:
@@ -77,15 +43,10 @@ try { python -c "import rank_bm25" *>$null } catch {
 저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `Inbox`로 설정합니다.
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Phase 2: RAG 지식 베이스 확인
 
 ### Step 2-1: 기존 RAG 존재 여부 확인
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -111,46 +72,6 @@ else
     echo "❌ RAG 없음. 세미나 주제에 대한 사전 지식이 없습니다."
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-
-$TOPIC = "{TOPIC}"
-$CATEGORY = "{CATEGORY}"
-$SAFE_TOPIC = $TOPIC -replace '[ /]', '__'
-$SAFE_CATEGORY = $CATEGORY -replace '[ /]', '__'
-$AGENT_DIR = "$env:OBSIDIAN_VAULT_PATH"
-$RAG_MANIFEST = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag/manifest.json"
-$SOURCE_DIR = "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/sources"
-
-if (Test-Path $RAG_MANIFEST) {
-    Write-Host "✅ RAG 존재: $SAFE_CATEGORY/$SAFE_TOPIC"
-    $MANIFEST_PY = $RAG_MANIFEST -replace '\\', '/'
-    python -c "
-import json
-m = json.load(open('$MANIFEST_PY'))
-print(f'  📄 파일 수: {m.get(\"file_count\", 0)}개')
-print(f'  📦 크기: {int(m.get(\"total_bytes\",0)/1024)} KB')
-print(f'  🕐 최종 업데이트: {m.get(\"updated\",\"\")[:10]}')
-"
-} else {
-    Write-Host "❌ RAG 없음. 세미나 주제에 대한 사전 지식이 없습니다."
-}
-```
-
-</tab>
-</tabs>
-
 ### Step 2-2: [조건부] 사전 지식 수집 여부 결정
 
 **RAG가 없는 경우** 사용자에게 질문합니다:
@@ -160,11 +81,7 @@ print(f'  🕐 최종 업데이트: {m.get(\"updated\",\"\")[:10]}')
    웹 검색으로 배경 지식을 미리 수집할까요?
    (y = 수집 후 시작 / n = 수집 없이 바로 시작)
 ```
-
 **`y` 입력 시**: 아래 검색 실행 후 Step 2-3으로
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -186,41 +103,11 @@ python3 "$AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" \
   --vault-path "$OBSIDIAN_VAULT_PATH" \
   --category "$CATEGORY"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-python "$env:AGENT_ROOT/.gemini/skills/tavily-search/scripts/search_tavily.py" `
-  --query "$TOPIC" `
-  --output-dir "$SOURCE_DIR" `
-  --max-results 5 `
-  --search-depth advanced `
-  --use-jina `
-  --exclude-domains "reddit.com,youtube.com,amazon.com,ebay.com" `
-  --min-content-length 300
-
-python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
-  --topic "$TOPIC" `
-  --sources-dir "$SOURCE_DIR" `
-  --output-dir "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC/rag" `
-  --vault-path "$env:OBSIDIAN_VAULT_PATH" `
-  --category "$CATEGORY"
-```
-
-</tab>
-</tabs>
-
 **`n` 입력 시**: RAG 없이 Phase 3으로 진행 (보강 없이 분류·저장만 수행)
 
 ### Step 2-3: 소스 경로 로드
 
 RAG가 있는 경우 manifest에서 `SOURCE_DIRS`를 추출합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f "$RAG_MANIFEST" ]; then
@@ -237,33 +124,7 @@ else
     HAS_RAG=false
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path $RAG_MANIFEST) {
-    $MANIFEST_PY2 = $RAG_MANIFEST -replace '\\', '/'
-    $SOURCE_DIRS = python -c "
-import json, os
-m = json.load(open('$MANIFEST_PY2'))
-vault = m.get('vault_path') or os.environ.get('OBSIDIAN_VAULT_PATH', '')
-dirs = [os.path.join(vault, d) if not os.path.isabs(d) else d for d in m.get('source_dirs', [])]
-print(','.join(dirs))
-"
-    Write-Host "📁 소스 경로 로드 완료: $SOURCE_DIRS"
-    $HAS_RAG = $true
-} else {
-    $HAS_RAG = $false
-}
-```
-
-</tab>
-</tabs>
-
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Phase 3: 실시간 Q&A 캡처 루프 ⭐
 
@@ -287,7 +148,6 @@ updated: 2026-03-10
 
   '종료', 'exit', '그만' → 세션 종료
 ```
-
 ### Step 3-1: 사용자 입력 대기
 
 > **"📝 입력 (태그 선택 또는 자유 입력):"**
@@ -300,7 +160,6 @@ updated: 2026-03-10
 
 | 접두어 | 분류 | 아이콘 |
 |---
-created: 2026-03-10
 updated: 2026-03-10-----|------|--------|
 | `[Q]` 또는 `?`로 끝남 | Question (질문) | ❓ |
 | `[O]` | Opinion (의견) | 💬 |
@@ -318,9 +177,6 @@ updated: 2026-03-10-----|------|--------|
 ### Step 3-3: [조건부] RAG 맥락 보강
 
 `HAS_RAG=true`인 경우에만 실행합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ "$HAS_RAG" = "true" ]; then
@@ -353,45 +209,6 @@ else
   echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 하이브리드 검색 건너뜀"
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if ($HAS_RAG) {
-    # 1. 단일 소스 디렉토리 (SOURCE_DIRS가 쉼표로 구분된 문자열일 경우 처리)
-    $DIRS = $SOURCE_DIRS -split ','
-    foreach ($dir in $DIRS) {
-        Write-Host "=== 🗂️ Obsidian RAG 검색: [$dir] ==="
-        python "$env:AGENT_ROOT/.gemini/skills/rag-retriever/scripts/retrieve_chunks.py" `
-          --query "{INPUT_TEXT}" `
-          --sources-dir "$dir" `
-          --top-k 3 `
-          --chunk-size 800
-    }
-}
-
-# 2. Vault 지식 그래프 (Multi-hop 연계 검색)
-Write-Host "=== 🕸️ Vault 지식 그래프(Multi-hop) 연계 검색 ==="
-python "$env:AGENT_ROOT/.gemini/skills/vault-index/scripts/vault_search.py" `
-  --query "{INPUT_TEXT}" `
-  --top-k 3 `
-  --threshold 0.3
-
-# 3. Mem0 동적 기억 하이브리드 검색
-Write-Host "=== 🧠 Mem0 동적 기억 하이브리드 검색 ==="
-if ($env:ANTHROPIC_API_KEY) {
-    python "$env:AGENT_ROOT/.gemini/skills/mem0-memory/scripts/memory_search.py" `
-      --query "{INPUT_TEXT}" `
-      --limit 3
-} else {
-    Write-Host "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 하이브리드 검색 건너뜀"
-}
-```
-
-</tab>
-</tabs>
-
 ### Step 3-4: 심층 해석 및 보강된 항목 생성 (Detailed Synthesis)
 
 사용자의 짧은 입력이나 단편적인 메모를 있는 그대로 기록하지 마십시오. RAG 검색 결과(또는 이전 컨텍스트)를 바탕으로 사용자의 의도를 전문가의 시각에서 **심층적으로 해석(Interpret)**하고, 이를 **논문 수준의 상세한 지식(Detailed Synthesis)**으로 확장하여 작성해야 합니다.
@@ -414,13 +231,9 @@ if ($env:ANTHROPIC_API_KEY) {
 
 📄 출처: {파일명} (score={s:.3f})  ← RAG 있을 때만
 ```
-
 **세션 내 전체 항목을 `SESSION_LOG`에 누적합니다.**
 
 ### Step 3-5: Obsidian 즉시 저장 (append)
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -434,32 +247,12 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
   --realtime
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
-  --topic "{TOPIC}_seminar" `
-  --content "{보강된_항목_내용}" `
-  --summary "{ENTRY_TYPE}: {INPUT_TEXT 앞 50자}" `
-  --category "$CATEGORY" `
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
-  --realtime
-```
-
-</tab>
-</tabs>
-
 저장 확인 후 다음을 출력합니다:
 
 ```
 💾 저장 완료 ({SESSION_LOG의 총 항목 수}번째 항목)
 [계속] 다음 입력을 기다립니다...
 ```
-
 ### Step 3-6: 루프 반복
 
 Step 3-1로 돌아가 입력을 계속 받습니다.
@@ -467,8 +260,6 @@ Step 3-1로 돌아가 입력을 계속 받습니다.
 종료 키워드(`종료`, `exit`, `quit`, `그만`, `끝`, `done`) 감지 시 Phase 4로 이동합니다.
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Phase 4: 세션 요약 및 마무리
 
@@ -487,7 +278,6 @@ updated: 2026-03-10
    ⭐ 핵심: {KEY_COUNT}개
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
-
 ### Step 4-2: 미답 질문 분석
 
 `SESSION_LOG`에서 `[Q]`(Question) 항목 중 대응하는 `[A]`(Answer)가 없는 항목을 추출합니다.
@@ -498,7 +288,6 @@ updated: 2026-03-10
   2. {질문2}
   ...
 ```
-
 **미답 질문이 있을 경우** 제안합니다:
 
 ```
@@ -506,13 +295,9 @@ updated: 2026-03-10
    /knowledge_tutor 로 각 질문에 대한 웹 검색을 실행할 수 있습니다.
    (y = 목록 저장 후 계속 / n = 건너뜀)
 ```
-
 `y` 입력 시: 미답 질문 목록을 별도 섹션으로 노트에 저장합니다.
 
 ### Step 4-3: 세션 전체 요약 저장
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -529,27 +314,6 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
   --realtime
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-$TODAY = Get-Date -Format "yyyy-MM-dd"
-
-python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" `
-  --topic "{TOPIC}_seminar" `
-  --content "{전체_SESSION_LOG_및_미답_질문_목록}" `
-  --summary "세미나 완료: {N}항목 ({Q_COUNT}Q / {O_COUNT}O / {KEY_COUNT}Key), 미답 {UNANSWERED_COUNT}개" `
-  --category "$CATEGORY" `
-  --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" `
-  --realtime
-```
-
-</tab>
-</tabs>
-
 ### Step 4-4: 완료 메시지
 
 ```
@@ -564,10 +328,7 @@ python "$env:AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsi
 
 Obsidian에서 확인해보세요! 🎉
 ```
-
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## 예시 세션
 
@@ -647,10 +408,7 @@ USER: y
 AI: ✅ 세미나 기록 완료!
     ...
 ```
-
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Notes
 

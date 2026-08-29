@@ -1,1 +1,1 @@
-/Users/jhjh/projects/knowledge/.gemini/workflows/sync_clean.md
+../../.gemini/workflows/sync_clean.md

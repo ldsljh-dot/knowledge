@@ -27,7 +27,7 @@ BM25(Okapi BM25) 기반 청크 검색 스킬입니다.
 ## 사용법
 
 ```bash
-cd <project_root>/.agent/skills/rag-retriever
+cd <project_root>/.gemini/skills/rag-retriever
 
 python scripts/retrieve_chunks.py \
   --query "MIG 파티셔닝 원리" \

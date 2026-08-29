@@ -4,24 +4,17 @@ updated: 2026-03-10
 description: [Robust] 세미나/메모를 입력받아 표준 RAG({Category})를 구축하고 내용을 누적 저장하는 무한 루프 워크플로우
 trigger: /seminar
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 # 🎙️ Seminar & Knowledge Capture Workflow (Robust)
 
 이 워크플로우는 사용자의 메모를 입력받아 **표준 지식 베이스 구조**(`{Category}/{Topic}`)에 안전하게 저장합니다. 지식이 없으면 자동으로 수집하고, 있으면 즉시 활용합니다.
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Phase 1: 환경 설정 및 초기화
 
 ### Step 1-1: 필수 환경 점검
 실행에 필요한 환경 변수와 패키지를 확인합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 # 1. 환경 변수 로드
@@ -31,10 +24,6 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 # 2. 필수 패키지 점검
 python3 -c "import tavily, rank_bm25" 2>/dev/null || { echo "📦 Installing dependencies..."; pip install -r "$AGENT_ROOT/requirements.txt"; }
 ```
-
-</tab>
-</tabs>
-
 ### Step 1-2: 주제 확정 (대화형)
 
 사용자에게 명시적으로 질문하여 변수를 확정합니다.
@@ -45,17 +34,12 @@ python3 -c "import tavily, rank_bm25" 2>/dev/null || { echo "📦 Installing dep
 저장될 카테고리(`{CATEGORY}`) 변수는 고정값인 `Inbox`로 설정합니다.
 
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Phase 2: 지식 베이스(RAG) 무결성 검사
 
 ### Step 2-1: 경로 계산 및 RAG 확인
 
 입력받은 `TOPIC`과 `CATEGORY`를 기반으로 안전한 파일 경로(`SafeTopic`)를 계산하고 RAG 존재 여부를 확인합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 # 변수 설정 (사용자 입력값 적용)
@@ -78,16 +62,9 @@ else
     echo "🌐 새로운 지식 베이스를 생성해야 합니다."
 fi
 ```
-
-</tab>
-</tabs>
-
 ### Step 2-2: [조건부] 지식 자동 수집 (Tutor Flow)
 
 `RAG_EXISTS=false`인 경우에만 실행하여 중복 수집을 방지합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 # RAG가 없을 때만 실행
@@ -111,13 +88,7 @@ else
     echo "⏩ 이미 RAG가 존재하므로 수집을 건너뜁니다."
 fi
 ```
-
-</tab>
-</tabs>
-
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Phase 3: 실시간 메모 루프 (Interaction Loop) ⭐
 
@@ -130,9 +101,6 @@ updated: 2026-03-10
 ### Step 3-2: RAG 검색 및 지식 합성
 
 입력된 메모(`INPUT_TEXT`)와 RAG 지식을 결합합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 # 입력 텍스트가 '종료' 관련이면 스크립트에서 처리하지 않음 (Agent 레벨에서 루프 탈출)
@@ -162,10 +130,6 @@ else
   echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 하이브리드 검색 건너뜀"
 fi
 ```
-
-</tab>
-</tabs>
-
 **[Agent Action] (핵심: 최고 수준의 밀도와 기술적 깊이를 갖춘 전문 보고서 작성)**:
 사용자의 짧은 메모, 단어, 혹은 지시를 단순 기록하거나 요약하는 수준에 머물러서는 **절대 안 됩니다**. 사용자의 입력과 검색된 RAG 컨텍스트(혹은 사전 지식)를 결합하여, **가장 밀도 높고 전문적인 "주간 보고서/기술 분석서" 수준의 구조화된 문서**로 확장하고 합성해야 합니다.
 
@@ -185,9 +149,6 @@ fi
 
 ### Step 3-3: Obsidian 누적 저장 (Append)
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidian.py" \
   --topic "$TOPIC" \
@@ -197,13 +158,7 @@ python3 "$AGENT_ROOT/.gemini/skills/obsidian-integration/scripts/save_to_obsidia
   --vault-path "$AGENT_DIR/$SAFE_CATEGORY/$SAFE_TOPIC" \
   --realtime
 ```
-
-</tab>
-</tabs>
-
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Phase 4: 안전 종료
 
@@ -213,17 +168,13 @@ updated: 2026-03-10
 echo "✅ 모든 세션 기록이 안전하게 저장되었습니다."
 echo "📁 파일 위치: $AGENT_DIR/$SAFE_CATEGORY"
 ```
-
 ### Step 4-2: log.md 기록
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 echo "## [$(date +%Y-%m-%d)] seminar | {TOPIC}" >> "$OBSIDIAN_VAULT_PATH/log.md"
 ```
-
 ---
-created: 2026-03-10
-updated: 2026-03-10
 
 ## Notes
 - **Robustness**: 파일 경로의 특수문자를 자동으로 처리(`SAFE_TOPIC`)하여 OS 오류를 방지합니다.

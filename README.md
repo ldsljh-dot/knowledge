@@ -9,18 +9,26 @@ Tavily 웹 검색 → Socratic 튜터링 → Obsidian 저장을 `/knowledge_tuto
 
 ```
 KnowledgeEngine/
-├── .agent/
-│   ├── workflows/
-│   │   └── knowledge_tutor.md    ← Claude Code가 읽는 워크플로우 정의
-│   └── skills/
+├── .gemini/
+│   ├── workflows/          ← 워크플로우 정의 (bash 전용, macOS)
+│   │   ├── knowledge_tutor.md    ← Claude Code가 읽는 워크플로우 정의
+│   │   ├── knowledge_query.md
+│   │   └── ...
+│   └── skills/             ← 파이썬 스킬 스크립트
 │       ├── tavily-search/        ← 웹 검색 스킬
 │       │   ├── SKILL.md
 │       │   └── scripts/
 │       │       └── search_tavily.py
-│       └── obsidian-integration/ ← Obsidian 저장 스킬
-│           ├── SKILL.md
-│           └── scripts/
-│               └── save_to_obsidian.py
+│       ├── obsidian-integration/ ← Obsidian 저장 스킬
+│       │   ├── SKILL.md
+│       │   └── scripts/
+│       │       └── save_to_obsidian.py
+│       ├── vault-index/          ← Qdrant 의미 검색 인덱스
+│       ├── rag-retriever/        ← BM25 RAG 청크 검색
+│       └── ...
+├── .agents/skills/         ← 에이전트 공용 스킬 (obsidian, pptx-generator, ...)
+├── .claude/  .qwen/  .agent/  ← 위 스킬/워크플로우의 심링크 미러
+├── .venv/                  ← Python 가상환경 (gitignore)
 ├── .env.example
 ├── requirements.txt
 └── README.md
@@ -34,8 +42,9 @@ KnowledgeEngine/
 ## 셋업
 
 ```bash
-# 1. 의존성 설치
-pip install -r requirements.txt
+# 1. 가상환경 생성 및 의존성 설치 (macOS)
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 
 # 2. 환경변수 설정
 cp .env.example .env
@@ -116,13 +125,13 @@ AI: 💾 Obsidian 저장 중...
 
 ```bash
 # Tavily 검색만
-cd .agent/skills/tavily-search
+cd .gemini/skills/tavily-search
 python scripts/search_tavily.py \
   --query "MLIR affine dialect" \
   --output-dir "$OBSIDIAN_VAULT_PATH/sources/MLIR_affine"
 
 # Obsidian 저장만
-cd .agent/skills/obsidian-integration
+cd .gemini/skills/obsidian-integration
 python scripts/save_to_obsidian.py \
   --topic "MLIR affine dialect" \
   --content "## 💬 학습 기록\n### Q1: ..." \

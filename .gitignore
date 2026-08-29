@@ -1,6 +1,7 @@
 # Environment Variables
 # .env (git-crypt로 암호화)
 .env.local
+.venv/
 
 # Python
 __pycache__/

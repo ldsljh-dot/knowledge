@@ -22,9 +22,6 @@ trigger: /code_analyze
 
 `.env`를 로드하여 `OBSIDIAN_VAULT_PATH`와 `AGENT_ROOT`를 자동 설정합니다.
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -f knowledge/.env ]; then set -a; source knowledge/.env; set +a; fi
@@ -41,39 +38,6 @@ echo "PROJECT_NAME:        $PROJECT_NAME"
 
 python3 -c "import rank_bm25" 2>/dev/null || { echo "Installing dependencies..."; pip install -r "$AGENT_ROOT/requirements.txt"; }
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-$TARGET_PATH = $env:AGENT_ROOT
-$PROJECT_NAME = (Get-Item $TARGET_PATH).Name
-
-Write-Host "=== 환경 정보 ==="
-Write-Host "AGENT_ROOT:          $env:AGENT_ROOT"
-Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
-Write-Host "TARGET_PATH:         $TARGET_PATH"
-Write-Host "PROJECT_NAME:        $PROJECT_NAME"
-
-try { python -c "import rank_bm25" *>$null } catch {
-    Write-Host "Installing dependencies..."
-    pip install -r "$env:AGENT_ROOT\requirements.txt"
-}
-```
-
-</tab>
-</tabs>
-
 LLM은 `{TARGET_PATH}`, `{PROJECT_NAME}`, `{OBSIDIAN_VAULT_PATH}`를 기억합니다.
 
 ---
@@ -81,9 +45,6 @@ LLM은 `{TARGET_PATH}`, `{PROJECT_NAME}`, `{OBSIDIAN_VAULT_PATH}`를 기억합�
 ### Step 0-2: Mem0에서 기존 코드 분석 기억 조회
 
 `ANTHROPIC_API_KEY`가 있으면 이 프로젝트의 기존 코드 분석 기억을 Mem0에서 검색합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -99,34 +60,6 @@ else
   echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 조회 건너뜀"
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-if ($env:ANTHROPIC_API_KEY) {
-    Write-Host "=== Mem0 기억 조회: {PROJECT_NAME} 코드 분석 ==="
-    python "$env:AGENT_ROOT/knowledge/.gemini/skills/mem0-memory/scripts/memory_search.py" `
-      --query "{PROJECT_NAME} 코드 분석 code_analyze" `
-      --limit 5
-} else {
-    Write-Host "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 조회 건너뜀"
-}
-```
-
-</tab>
-</tabs>
-
 #### Mem0 결과 처리
 
 - **기억이 있는 경우**: 기억 목록을 `{MEM0_CONTEXT}`에 저장하고, 사용자에게 이전 분석 이력을 제시.
@@ -141,9 +74,6 @@ if ($env:ANTHROPIC_API_KEY) {
 Vault Index에서 `{PROJECT_NAME}`과 관련된 기존 폴더를 의미적으로 검색합니다.
 이를 통해 **이미 이 프로젝트의 코드 분석이 Obsidian 어디에 저장되어 있는지** 자동으로 탐색합니다.
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -f knowledge/.env ]; then set -a; source knowledge/.env; set +a; fi
@@ -155,31 +85,6 @@ python3 "$AGENT_ROOT/knowledge/.gemini/skills/vault-index/scripts/vault_search.p
   --top-k 5 \
   --threshold 0.25
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-Write-Host "=== Vault Index: {PROJECT_NAME} 관련 기존 지식 검색 ==="
-python "$env:AGENT_ROOT/knowledge/.gemini/skills/vault-index/scripts/vault_search.py" `
-  --query "{PROJECT_NAME} code analysis 코드 분석" `
-  --top-k 5 `
-  --threshold 0.25
-```
-
-</tab>
-</tabs>
-
 vault_search.py 출력 형식:
 ```
 🔍 관련 지식 (쿼리: "...")
@@ -188,7 +93,6 @@ vault_search.py 출력 형식:
   2. [███░░░░░░░] 38%  🗂  Areas
      📂 2-Areas/Architecture/PyTorchSim_Frontend
 ```
-
 LLM은 이 검색 결과를 `{VAULT_SEARCH_RESULTS}`에 저장합니다.
 
 ---
@@ -198,9 +102,6 @@ LLM은 이 검색 결과를 `{VAULT_SEARCH_RESULTS}`에 저장합니다.
 ### Step 1-1: 분석 가능한 Layer 목록 표시
 
 프로젝트 경로 내 하위 디렉토리(Layer 후보)를 나열합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 TARGET_PATH="{TARGET_PATH}"
@@ -212,22 +113,6 @@ find "$TARGET_PATH" -maxdepth 1 -type d \
     -not -name "__pycache__" -not -name "vault" \
     | sed "s|$TARGET_PATH/||" | grep -v "^$" | sort
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-$TARGET_PATH = "{TARGET_PATH}"
-
-Write-Host "=== 분석 가능한 주요 Layer (코드베이스 하위 디렉토리) ==="
-Get-ChildItem -Path $TARGET_PATH -Directory | Where-Object {
-    $_.Name -notmatch '^\.|build|dist|node_modules|venv|__pycache__|vault'
-} | Select-Object -ExpandProperty Name | Sort-Object
-```
-
-</tab>
-</tabs>
-
 ### Step 1-2: Layer 선택 및 기존 지식 매칭
 
 사용자에게 Vault Index 검색 결과와 Layer 목록을 함께 제시합니다:
@@ -253,9 +138,6 @@ Get-ChildItem -Path $TARGET_PATH -Directory | Where-Object {
 
 선택된 Layer에 대해 Vault Index 검색을 재수행하여 **정확한 저장 위치**를 결정합니다.
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -f knowledge/.env ]; then set -a; source knowledge/.env; set +a; fi
@@ -280,41 +162,6 @@ python3 "$AGENT_ROOT/knowledge/.gemini/skills/vault-index/scripts/vault_search.p
   --top-k 5 \
   --threshold 0.25
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-Write-Host "=== 저장 위치 결정: {PROJECT_NAME} {SELECTED_LAYER} ==="
-
-# PARA 폴더 구조 표시
-foreach ($para in @("1-Projects", "2-Areas", "3-Resources")) {
-    Write-Host "`n[$para]"
-    Get-ChildItem "$env:OBSIDIAN_VAULT_PATH/$para" -Recurse -Depth 2 -Directory -ErrorAction SilentlyContinue |
-        ForEach-Object { $_.FullName -replace [regex]::Escape("$env:OBSIDIAN_VAULT_PATH/"), "" } | Sort-Object
-}
-
-# Vault Index 검색 (Layer 특화)
-Write-Host "`n=== Vault 유사 폴더 검색 ==="
-python "$env:AGENT_ROOT/knowledge/.gemini/skills/vault-index/scripts/vault_search.py" `
-  --query "{PROJECT_NAME} {SELECTED_LAYER} 코드 분석 구조" `
-  --top-k 5 `
-  --threshold 0.25
-```
-
-</tab>
-</tabs>
-
 #### 검색 결과 기반 저장 경로 추천 규칙
 
 | 조건 | 추천 경로 결정 방법 |
@@ -349,35 +196,16 @@ python "$env:AGENT_ROOT/knowledge/.gemini/skills/vault-index/scripts/vault_searc
 
 새 경로인 경우 폴더를 생성합니다:
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 SAFE_LAYER=$(echo "{SELECTED_LAYER}" | tr ' /' '_')
 mkdir -p "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_LAYER/sources"
 mkdir -p "$OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_LAYER/rag"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-$SAFE_LAYER = "{SELECTED_LAYER}" -replace '[ /]', '_'
-New-Item -ItemType Directory -Force -Path "$env:OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_LAYER/sources" | Out-Null
-New-Item -ItemType Directory -Force -Path "$env:OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_LAYER/rag" | Out-Null
-```
-
-</tab>
-</tabs>
-
 ---
 
 ### Step 1-4: 기존 지식(Context) 로드
 
 선택된 저장 경로에 이미 분석 문서가 존재하면 읽어와 `{EXISTING_KNOWLEDGE}`에 저장합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 SAFE_LAYER=$(echo "{SELECTED_LAYER}" | tr ' /' '_')
@@ -390,25 +218,6 @@ else
     echo "기존 문서가 없습니다. 새로 분석을 시작합니다."
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-$SAFE_LAYER = "{SELECTED_LAYER}" -replace '[ /]', '_'
-$LAYER_DOC = "$env:OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_LAYER/${SAFE_LAYER}.md"
-
-if (Test-Path $LAYER_DOC) {
-    Write-Host "=== 기존 분석 문서 발견: $LAYER_DOC ==="
-    Get-Content $LAYER_DOC
-} else {
-    Write-Host "기존 문서가 없습니다. 새로 분석을 시작합니다."
-}
-```
-
-</tab>
-</tabs>
-
 LLM은 `{EXISTING_KNOWLEDGE}` + `{MEM0_CONTEXT}`를 분석 컨텍스트로 활용하며, Phase 3에서 기존 구조나 수동 메모를 파괴하지 않고 병합(Merge)합니다.
 
 ---
@@ -431,9 +240,6 @@ LLM은 `{EXISTING_KNOWLEDGE}` + `{MEM0_CONTEXT}`를 분석 컨텍스트로 활�
 
 ### Step 2-1: Layer 내 언어 감지 및 구조 파악
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 ANALYSIS_PATH="{ANALYSIS_PATH}"
 echo "=== [$ANALYSIS_PATH] 내 언어별 파일 수 ==="
@@ -448,30 +254,9 @@ else
     find "$ANALYSIS_PATH" -maxdepth 3 | head -100 | sort
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-$ANALYSIS_PATH = "{ANALYSIS_PATH}"
-Write-Host "=== [$ANALYSIS_PATH] 내 파일 수 ==="
-Write-Host "총 파일 수: $( (Get-ChildItem -Path $ANALYSIS_PATH -Recurse -File).Count )"
-
-Write-Host "`n=== [$ANALYSIS_PATH] 구조 트리 ==="
-Get-ChildItem -Path $ANALYSIS_PATH -Recurse -Depth 3 |
-    Where-Object { $_.FullName -notmatch '(\.git|build|dist|venv|node_modules|__pycache__)' } |
-    Select-Object -ExpandProperty FullName | Sort-Object
-```
-
-</tab>
-</tabs>
-
 감지된 언어를 `{PRIMARY_LANG}`으로, 트리를 `{LAYER_TREE}`에 저장합니다.
 
 ### Step 2-2: Layer 내 Class/Struct 집중 추출
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 ANALYSIS_PATH="{ANALYSIS_PATH}"
@@ -480,26 +265,9 @@ grep -rn "^\s*class \|^\s*struct " "$ANALYSIS_PATH" \
     --exclude-dir="build" --exclude-dir="test*" \
     | head -100
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-$ANALYSIS_PATH = "{ANALYSIS_PATH}"
-Get-ChildItem -Path $ANALYSIS_PATH -Recurse -Include *.py, *.cpp, *.h, *.go |
-    Where-Object { $_.FullName -notmatch '(build|test)' } |
-    Select-String -Pattern '^\s*(class|struct) ' | Select-Object -First 100
-```
-
-</tab>
-</tabs>
-
 ### Step 2-3: Deep 전용 — 함수/의존성 추적
 
 `{DEPTH}` = 3 (Deep) 일 때만 추가 실행합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 ANALYSIS_PATH="{ANALYSIS_PATH}"
@@ -515,26 +283,6 @@ grep -rn "^import \|^from \|^#include " "$ANALYSIS_PATH" \
     --exclude-dir="build" \
     | sort -u | head -80
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-$ANALYSIS_PATH = "{ANALYSIS_PATH}"
-Write-Host "=== 함수/메서드 정의 목록 ==="
-Get-ChildItem -Path $ANALYSIS_PATH -Recurse -Include *.py, *.cpp, *.h |
-    Where-Object { $_.FullName -notmatch '(build|test)' } |
-    Select-String -Pattern '^\s*(def |void |auto |inline )' | Select-Object -First 150
-
-Write-Host "`n=== import/include 의존성 ==="
-Get-ChildItem -Path $ANALYSIS_PATH -Recurse -Include *.py, *.cpp, *.h |
-    Select-String -Pattern '^(import |from |#include )' |
-    Select-Object -ExpandProperty Line | Sort-Object -Unique | Select-Object -First 80
-```
-
-</tab>
-</tabs>
-
 ### Step 2-4: ⭐ 핵심 소스 파일 실제 읽기 (품질 핵심 단계)
 
 > ⚠️ **이 단계가 분석 품질을 결정합니다.**
@@ -556,7 +304,6 @@ LLM은 `view_file` 도구를 사용하여 각 핵심 소스 파일을 순차적�
   → view_file: Scheduler/scheduler.py     (전체)
   → view_file: Simulator/simulator.py     (의존성 파일 — import로 발견)
 ```
-
 #### 읽기 후 LLM이 반드시 정리할 항목
 
 읽은 코드를 바탕으로 아래 **10가지 분석 차원(Dimension)**을 정리하여 `{CODE_ANALYSIS}`에 저장합니다:
@@ -639,7 +386,6 @@ project: {PROJECT_NAME}
 - {TODAY}: 분석 깊이 {DEPTH} 로 코드베이스 최신 동기화 완료.
 ANALYSIS_EOF
 ```
-
 ---
 
 ### Step 3-2: RAG Sources 파일 생성 (⭐ 품질 핵심)
@@ -691,9 +437,6 @@ RAG용 Sources 파일들을 최신 코드를 기반으로 풍부하게 생성합
 
 이후 Manifest를 재구축합니다:
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -f knowledge/.env ]; then set -a; source knowledge/.env; set +a; fi
@@ -711,45 +454,11 @@ python3 "$AGENT_ROOT/knowledge/.gemini/skills/rag-retriever/scripts/create_manif
   --vault-path "$OBSIDIAN_VAULT_PATH" \
   --category "{CATEGORY}"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-$SAFE_LAYER = "{SELECTED_LAYER}" -replace '[ /]', '_'
-$SAVE_DIR = "$env:OBSIDIAN_VAULT_PATH/{CATEGORY}/$SAFE_LAYER"
-$SOURCES_DIR = "$SAVE_DIR\sources"
-$RAG_DIR = "$SAVE_DIR\rag"
-
-python "$env:AGENT_ROOT/knowledge/.gemini/skills/rag-retriever/scripts/create_manifest.py" `
-  --topic "{PROJECT_NAME}_{SELECTED_LAYER}" `
-  --sources-dir "$SOURCES_DIR" `
-  --output-dir "$RAG_DIR" `
-  --vault-path "$env:OBSIDIAN_VAULT_PATH" `
-  --category "{CATEGORY}"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ### Step 3-3: Vault Index 갱신
 
 새 지식이 저장되었으므로 Vault Index를 자동 갱신합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -758,27 +467,12 @@ if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 python3 "$AGENT_ROOT/knowledge/.gemini/skills/vault-index/scripts/vault_index.py"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-python "$env:AGENT_ROOT/knowledge/.gemini/skills/vault-index/scripts/vault_index.py"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ### Step 3-4: 분석 결과 Mem0 저장
 
 Obsidian 저장 완료 후, 이번 분석 요약을 Mem0 장기 기억에도 저장합니다.
 `ANTHROPIC_API_KEY`가 없으면 건너뜁니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -797,63 +491,14 @@ else
   echo "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 저장 건너뜀"
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-if ($env:ANTHROPIC_API_KEY) {
-    $TODAY = Get-Date -Format "yyyy-MM-dd"
-    $SAFE_LAYER = "{SELECTED_LAYER}" -replace '[ /]', '_'
-    $memContent = "{PROJECT_NAME}/{SELECTED_LAYER} 코드 분석 완료 ($TODAY). 분석 깊이: {DEPTH}. 핵심 클래스: {CLASS_ANALYSIS_SUMMARY}. 저장 경로: {CATEGORY}/$SAFE_LAYER/"
-    $memMeta = "{`"workflow`": `"code_analyze`", `"project`": `"{PROJECT_NAME}`", `"layer`": `"{SELECTED_LAYER}`", `"depth`": `"{DEPTH}`", `"category`": `"{CATEGORY}`", `"topic`": `"{SELECTED_LAYER}`", `"obsidian_path`": `"{CATEGORY}/$SAFE_LAYER`", `"date`": `"$TODAY`"}"
-    python "$env:AGENT_ROOT/knowledge/.gemini/skills/mem0-memory/scripts/memory_save.py" `
-      --content "$memContent" `
-      --agent "claude" `
-      --metadata "$memMeta"
-    Write-Host "✅ Mem0 저장 완료"
-} else {
-    Write-Host "ℹ️  ANTHROPIC_API_KEY 미설정 — Mem0 저장 건너뜀"
-}
-```
-
-</tab>
-</tabs>
-
-
 ### Step 3-5: log.md 기록
 
 분석 완료 후 `$OBSIDIAN_VAULT_PATH/log.md`에 한 줄 추가합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 echo "## [$(date +%Y-%m-%d)] code_analyze | {PROJECT_NAME}/{SELECTED_LAYER}" >> "$OBSIDIAN_VAULT_PATH/log.md"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-$today = Get-Date -Format "yyyy-MM-dd"
-Add-Content -Path "$env:OBSIDIAN_VAULT_PATH/log.md" -Value "## [$today] code_analyze | {PROJECT_NAME}/{SELECTED_LAYER}"
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Phase 4: 완료

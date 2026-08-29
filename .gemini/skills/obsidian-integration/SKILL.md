@@ -10,7 +10,7 @@ description: "학습 대화 내용(Q&A)과 핵심 요약을 Obsidian vault에 �
 ## 사용법
 
 ```bash
-cd <project_root>/.agent/skills/obsidian-integration
+cd <project_root>/.gemini/skills/obsidian-integration
 
 python scripts/save_to_obsidian.py \
   --topic "학습 주제" \
@@ -39,11 +39,10 @@ python scripts/save_to_obsidian.py \
 
 ## 출력 파일 형식
 
-vault 루트에 다음 파일이 생성됩니다:
+`{category}` 폴더 아래에 날짜가 붙은 파일이 생성됩니다 (`--wiki` 모드와 누적 모드는 토픽 폴더 내부에 생성):
 
 ```
-{vault-path}/
-└── {YYYY-MM-DD}_{topic}.md
+{vault-path}/{category}/{YYYY-MM-DD}_{topic}.md
 ```
 
 파일 구조:

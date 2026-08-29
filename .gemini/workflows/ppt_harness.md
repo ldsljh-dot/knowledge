@@ -19,9 +19,6 @@ trigger: /ppt_harness
 
 실행 전 다음을 확인하세요:
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 # 환경 변수 로드 및 AGENT_ROOT 설정
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -41,44 +38,6 @@ if ! python -c "import markitdown, rank_bm25" &> /dev/null; then
   pip install -r "$AGENT_ROOT/requirements.txt"
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-# .env 파일 로드
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-
-# AGENT_ROOT 설정
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-Write-Host "AGENT_ROOT: $env:AGENT_ROOT"
-Write-Host "OBSIDIAN_VAULT_PATH: $env:OBSIDIAN_VAULT_PATH"
-
-# 의존성 패키지 확인
-if (!(Get-Command pptxgenjs -ErrorAction SilentlyContinue)) {
-    Write-Host "⚠️ pptxgenjs가 설치되지 않았습니다. 설치를 진행합니다..."
-    npm install -g pptxgenjs
-}
-
-try {
-    python -c "import markitdown, rank_bm25" *>$null
-} catch {
-    Write-Host "⚠️ 필수 패키지가 설치되지 않았습니다. 설치를 진행합니다..."
-    pip install -r "$env:AGENT_ROOT\requirements.txt"
-}
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Phase 0: 환경 설정 및 하네스 로드
@@ -87,44 +46,17 @@ try {
 
 스킬 상세 지침을 확보합니다.
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 cat "$AGENT_ROOT/.gemini/skills/ppt-harness/SKILL.md"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-Get-Content "$env:AGENT_ROOT\.gemini\skills\ppt-harness\SKILL.md"
-```
-
-</tab>
-</tabs>
-
 **[Agent Action]** SKILL.md의 각 섹션(Overview, Rules, Skill 1~4, Feedback)을 읽고 파악하세요.
 
 ### Step 0-2: 하네스 규칙 로드
 
 사용자가 기본 하네스를 사용할지 커스텀 하네스를 사용할지 선택합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -140,35 +72,6 @@ fi
 
 cat "$HARNESS_PATH"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-# 기본 하네스 로드
-$HARNESS_PATH = "$env:AGENT_ROOT\.gemini\skills\ppt-harness\harnesses\default.json"
-
-# 커스텀 하네스 경로가 있으면 대체
-if ($args.Count -gt 0) {
-    $HARNESS_PATH = $args[0]
-}
-
-Get-Content $HARNESS_PATH
-```
-
-</tab>
-</tabs>
-
 사용자에게 다음과 같이 묻습니다:
 
 > **"사용할 하네스를 선택하세요:"**
@@ -257,7 +160,6 @@ Get-Content $HARNESS_PATH
   ...
 ]
 ```
-
 가이드라인:
 - 목차(TOC) 슬라이드를 첫 번호 뒤에 포함 권장
 - 각 섹션 시작 전에 `section_divider` 추가 권장
@@ -376,9 +278,6 @@ Get-Content $HARNESS_PATH
 
 `{COMPLETE_SLIDES}`를 임시 파일로 저장합니다.
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
@@ -389,37 +288,9 @@ echo "$SLIDES_JSON" > "$AGENT_ROOT/.gemini/skills/ppt-harness/temp/slides.json"
 
 echo "슬라이드 파일 저장 완료: $AGENT_ROOT/.gemini/skills/ppt-harness/temp/slides.json"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-# 임시 슬라이드 파일 생성
-New-Item -ItemType Directory -Force -Path "$env:AGENT_ROOT\.gemini\skills\ppt-harness\temp" | Out-Null
-$SLIDES_JSON | Out-File -FilePath "$env:AGENT_ROOT\.gemini\skills\ppt-harness\temp\slides.json" -Encoding UTF8
-
-Write-Host "슬라이드 파일 저장 완료: $env:AGENT_ROOT\.gemini\skills\ppt-harness\temp\slides.json"
-```
-
-</tab>
-</tabs>
-
 ### Step 5-2: 결정론적 검증 (validate_slides.py)
 
 `validate_slides.py` 스크립트로 text_length, format_compliance, duplication을 검증합니다.
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -437,37 +308,6 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-# 검증 실행
-python "$env:AGENT_ROOT\.gemini\skills\ppt-harness\scripts\validate_slides.py" `
-  --slides "$env:AGENT_ROOT\.gemini\skills\ppt-harness\temp\slides.json" `
-  --harness "$env:AGENT_ROOT\.gemini\skills\ppt-harness\harnesses\default.json" `
-  --checks "text_length,format_compliance,duplication" `
-  --output "json"
-
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "❌ 검증 중 오류가 발생했습니다."
-  exit 1
-}
-```
-
-</tab>
-</tabs>
-
 ### Step 5-3: [Agent Action] 검증 결과 평가 및 재작성 루프
 
 **[Agent Action]** validate_slides.py의 출력(JSON)을 분석하고 위반 항목을 평가하세요.
@@ -489,7 +329,6 @@ while ATTEMPT <= MAX_REWRITE:
     else:
         루프 탈출 → Phase 6로 이동
 ```
-
 가이드라인:
 - **text_length 실패**: 글자 수를 줄이세요 (축약, 구조 단순화, 접속사 사용)
 - **format_compliance 실패**: 누락된 필드를 추가하세요
@@ -506,36 +345,12 @@ while ATTEMPT <= MAX_REWRITE:
 
 ### Step 6-1: pptx-generator 스킬 문서 로드
 
-<tabs>
-<tab label="Linux/macOS (Bash)">
-
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
 if [ -z "$AGENT_ROOT" ]; then export AGENT_ROOT=$(pwd); fi
 
 cat "$AGENT_ROOT/.agents/skills/pptx-generator/SKILL.md"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-Get-Content "$env:AGENT_ROOT\.agents\skills\pptx-generator\SKILL.md"
-```
-
-</tab>
-</tabs>
-
 ### Step 6-2: [Agent Action] 디자인 결정
 
 **[Agent Action]** pptx-generator SKILL.md의 "Step 2: Color Palette & Fonts"와 "Step 3: Select Design Style"에 따라 디자인을 결정하세요.
@@ -564,7 +379,6 @@ slides/
 ├── imgs/
 └── output/
 ```
-
 **각 JS 파일 포맷** (SKILL.md의 "Slide Output Format" 참조):
 ```javascript
 // slide-01.js
@@ -599,14 +413,10 @@ if (require.main === module) {
 
 module.exports = { createSlide, slideConfig };
 ```
-
 **주의사항**:
 - 하네스 텍스트 제약을 JS 코드에도 반영하세요
 - `{FINAL_SLIDES}`의 각 슬라이드 데이터를 `slideConfig` 객체에 반영
 - 불릿 텍스트 길이를 `wc -m`으로 확인하거나 Claude가 카운트하세요
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -621,39 +431,7 @@ echo "  - slide-01.js, slide-02.js, ..."
 echo "  - imgs/"
 echo "  - output/"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-# 슬라이드 디렉토리 생성
-New-Item -ItemType Directory -Force -Path "slides\imgs" | Out-Null
-New-Item -ItemType Directory -Force -Path "slides\output" | Out-Null
-
-Write-Host "슬라이드 JS 파일을 slides\ 디렉토리에 생성하세요."
-Write-Host "디렉토리 구조: slides\"
-Write-Host "  - slide-01.js, slide-02.js, ..."
-Write-Host "  - imgs\"
-Write-Host "  - output\"
-```
-
-</tab>
-</tabs>
-
 ### Step 6-4: compile.js 생성 및 PPTX 컴파일
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -701,74 +479,7 @@ fi
 
 echo "✅ PPTX 생성 완료: slides/output/presentation.pptx"
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-if (-not $env:AGENT_ROOT) { $env:AGENT_ROOT = Get-Location }
-
-$slideCount = if ($NUM_SLIDES) { $NUM_SLIDES } else { 12 }
-$topicEscaped = $TOPIC -replace '"', '\"'
-
-# compile.js 생성
-@'
-const pptxgen = require("pptxgenjs");
-const pres = new pptxgen();
-pres.layout = 'LAYOUT_16x9';
-pres.author = 'PPT Harness';
-pres.title = '" + $topicEscaped + "';
-
-const theme = {
-  primary: "0a0a0a",
-  secondary: "404040",
-  accent: "0070F3",
-  light: "D4AF37",
-  bg: "f5f5f5"
-};
-
-// 모든 슬라이드 모듈 로드
-const slideCount = ' + $slideCount + @';
-for (let i = 1; i <= slideCount; i++) {
-  const num = String(i).padStart(2, '0');
-  try {
-    const slideModule = require(`./slide-${num}.js`);
-    slideModule.createSlide(pres, theme);
-  } catch (e) {
-    console.error(`Failed to load slide-${num}.js: ${e.message}`);
-  }
-}
-
-pres.writeFile({ fileName: './output/presentation.pptx' });
-console.log('PPTX compilation complete: ./output/presentation.pptx');
-'@ | Out-File -FilePath "slides\compile.js" -Encoding UTF8
-
-# 컴파일 실행
-cd slides; node compile.js
-
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "❌ PPTX 컴파일 중 오류가 발생했습니다."
-  exit 1
-}
-
-Write-Host "✅ PPTX 생성 완료: slides\output\presentation.pptx"
-```
-
-</tab>
-</tabs>
-
 ### Step 6-5: QA (markitdown 검증)
-
-<tabs>
-<tab label="Linux/macOS (Bash)">
 
 ```bash
 if [ -f .env ]; then set -a; source .env; set +a; fi
@@ -783,34 +494,6 @@ if [ $? -eq 0 ]; then
   echo "⚠️ placeholder 텍스트가 발견되었습니다. 확인이 필요합니다."
 fi
 ```
-
-</tab>
-<tab label="Windows (PowerShell)">
-
-```powershell
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
-        if ($_ -match "^\s*[^#\s]+=.*$") {
-            $name, $value = $_.Split('=', 2)
-            [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-        }
-    }
-}
-
-# markitdown으로 텍스트 추출
-python -m markitdown slides\output\presentation.pptx
-
-# placeholder 텍스트 검증
-python -m markitdown slides\output\presentation.pptx | Select-String -Pattern "xxxx|lorem|ipsum|placeholder|this.*(page|slide).*layout" -CaseSensitive
-
-if ($?) {
-    Write-Host "⚠️ placeholder 텍스트가 발견되었습니다. 확인이 필요합니다."
-}
-```
-
-</tab>
-</tabs>
-
 ---
 
 ## Phase 7: 최종 검증 및 완료
@@ -846,7 +529,6 @@ if ($?) {
 💡 PPT 내용을 수정하려면 슬라이드 JS 파일을 편집 후 `cd slides && node compile.js` 를 실행하세요.
 💡 다른 규칙으로 재생성하려면 커스텀 하네스 JSON 파일을 준비하고 /ppt_harness 를 다시 실행하세요.
 ```
-
 ---
 
 ## Notes
